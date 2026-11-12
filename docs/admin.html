@@ -145,7 +145,8 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
     <span class="chip" id="modeChip"></span>
     <span class="status" id="status" aria-live="polite"></span>
     <div class="row">
-      <a class="btn primary" href="./" target="_blank" rel="noopener"><svg class="i"><use href="#i-out"/></svg>Buka roda</a>
+      <a class="btn primary" href="./" target="_blank" rel="noopener"><svg class="i"><use href="#i-out"/></svg>Buka undian</a>
+      <a class="btn" href="roda.html" target="_blank" rel="noopener">Versi roda</a>
       <button class="btn" id="lockNow" type="button"><svg class="i"><use href="#i-lock"/></svg>Kunci</button>
     </div>
   </header>
@@ -153,7 +154,7 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
     <div class="col">
       <section class="box">
         <div class="hd"><h2>Peserta</h2><span class="tally" id="ncount">0</span></div>
-        <p class="sub">Satu nama per baris. Perubahan langsung tampil di roda.</p>
+        <p class="sub">Satu nama per baris. Perubahan langsung tampil di layar undian.</p>
         <textarea id="names" aria-label="Daftar peserta" spellcheck="false" placeholder="Budi&#10;Siti&#10;Andi"></textarea>
       </section>
       <section class="box">
@@ -168,7 +169,7 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
         <p class="sub">Mode ditentukan selalu diumumkan di layar roda.</p>
         <div class="modes" role="radiogroup" aria-label="Mode undian">
           <label><input type="radio" name="mode" value="random"><span class="dot"></span><b>Acak murni</b><span class="d">Semua peserta punya peluang sama.</span></label>
-          <label class="pre"><input type="radio" name="mode" value="preset"><span class="dot"></span><b>Ditentukan panitia</b><span class="d">Roda berhenti pada antrean di bawah.</span></label>
+          <label class="pre"><input type="radio" name="mode" value="preset"><span class="dot"></span><b>Ditentukan panitia</b><span class="d">Undian berhenti pada antrean di bawah.</span></label>
         </div>
         <div id="presetBox">
           <label class="f" for="winners">Antrean pemenang, urut</label>
@@ -178,7 +179,7 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
         </div>
       </section>
       <section class="box">
-        <label class="toggle"><span><b>Hapus pemenang dari roda</b><br><span class="sub" style="margin:0">Setelah pengumuman ditutup, nama pemenang keluar dari roda.</span></span><input type="checkbox" id="remove"><span class="sw"></span></label>
+        <label class="toggle"><span><b>Hapus pemenang dari undian</b><br><span class="sub" style="margin:0">Setelah pengumuman ditutup, nama pemenang keluar dari undian.</span></span><input type="checkbox" id="remove"><span class="sw"></span></label>
       </section>
       <section class="box">
         <h2>Keamanan &amp; data</h2>
