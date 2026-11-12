@@ -21,7 +21,7 @@ A doorprize spin wheel: the committee loads names, presses spin, the room watche
 - Space bar spins.
 
 ## Brand Commitments
-Current event (binding, from the user's stage backdrop): **Customer Gathering PLN UIK Tanjung Jati B**, tagline "Beyond Energy  Beyond Collaboration" (blue / orange words), Bogor, November 2026. Sky-blue gradient, white condensed headline, blue-to-gold sweeping wave, energy skyline (plant chimneys, wind turbines, transmission towers). Logos (Danantara Indonesia, PLN) are not redrawn; add only from files the user supplies.
+Current event (binding, from the user's stage backdrop): **Customer Gathering**. Do not show the host company name (PLN etc.) on the wheel page. tagline "Beyond Energy  Beyond Collaboration" (blue / orange words), Bogor, November 2026. Sky-blue gradient, white condensed headline, blue-to-gold sweeping wave, energy skyline (plant chimneys, wind turbines, transmission towers). Logos (Danantara Indonesia, PLN) are not redrawn; add only from files the user supplies.
 
 ## Evidence on Hand
 No real participant names, logos or photos. Demo names are synthetic.
