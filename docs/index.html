@@ -50,7 +50,7 @@ h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(3.4rem,6v
 .serial small{font-size:.78rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
 .serial b{font-family:var(--display);font-weight:400;font-size:clamp(2.2rem,3.2vw,3rem);color:var(--volt);line-height:1;font-variant-numeric:tabular-nums}
 .mode{margin:0;padding:11px 14px;border-radius:12px;font-weight:600;font-size:.98rem;line-height:1.35;border:1px solid var(--rule);color:var(--soft)}
-.mode.preset{background:var(--alert);border-color:#ef6b6b;color:#fff}
+.mode.preset{order:99;padding:10px 0 0;border:0;border-top:1px solid var(--rule);border-radius:0;background:none;color:var(--soft);font-weight:500;font-style:italic;font-size:.95rem}
 .mode[hidden]{display:none}
 .spin{appearance:none;border:0;cursor:pointer;width:100%;padding:20px 24px;border-radius:14px;background:linear-gradient(180deg,#ffd95a,var(--volt) 55%,var(--volt-2));color:var(--navy);font-family:var(--display);font-size:1.7rem;letter-spacing:.08em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 12px 26px -8px rgba(3,20,60,.7);transition:filter .2s,transform .12s,opacity .2s}
 .spin:hover{filter:brightness(1.06)}
@@ -86,7 +86,7 @@ h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(3.4rem,6v
 /* room-readable on a projector: deliberately above the 6rem display ceiling */
 .win-name{margin:.08em 0 .06em;font-family:var(--display);font-weight:400;font-size:clamp(3.2rem,10vw,8.6rem);line-height:1;text-transform:uppercase;color:var(--white);overflow-wrap:anywhere;text-wrap:balance;text-shadow:0 8px 30px rgba(2,18,56,.65);animation:pop .7s cubic-bezier(.2,1.5,.35,1) .3s both}
 .win-sub{margin:0;font-weight:700;font-style:italic;font-size:clamp(1.1rem,2.2vw,1.8rem);color:var(--volt)}
-.win-note{margin:16px auto 0;max-width:44ch;font-size:.95rem;font-weight:600;color:#ffd0c9}
+.win-note{margin:16px auto 0;max-width:44ch;font-size:.95rem;font-weight:500;font-style:italic;color:var(--soft)}
 .win-note[hidden]{display:none}
 .win-tag{margin:clamp(18px,3vh,30px) 0 0;font-weight:700;font-style:italic;font-size:clamp(.9rem,1.4vw,1.1rem)}
 .win-tag .a{color:var(--cyan)}.win-tag .b{color:var(--volt)}
@@ -174,7 +174,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <p class="win-lead" id="winLead">Doorprize No. 001 · Selamat kepada</p>
     <p class="win-name" id="winName"></p>
     <p class="win-sub">mendapat doorprize</p>
-    <p class="win-note" id="winNote" hidden>Hasil ini sudah ditentukan panitia. Roda hanya untuk hiburan.</p>
+    <p class="win-note" id="winNote" hidden>Pemenang ditentukan oleh panitia.</p>
     <p class="win-tag"><span class="a">“Beyond Energy</span> <span class="b">Beyond Collaboration”</span></p>
     <button class="next" id="next">Lanjut</button>
   </div>
@@ -272,7 +272,7 @@ function draw(){
 function render(){
   var preset=s.mode==='preset';
   // random mode shows nothing; preset mode is always disclosed (product principle 2)
-  $('mode').textContent=preset?'Hasil sudah ditentukan panitia. Roda hanya untuk hiburan.':'';
+  $('mode').textContent=preset?'Pemenang doorprize ini ditentukan oleh panitia.':'';
   $('mode').hidden=!preset;$('mode').classList.toggle('preset',preset);
   $('serial').textContent='No. '+pad(s.log.length+1);
   $('count').textContent=s.names.length?s.names.length+' nama di roda':'Roda kosong. Isi nama peserta di halaman admin.';
