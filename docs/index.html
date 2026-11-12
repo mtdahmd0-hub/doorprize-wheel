@@ -272,7 +272,7 @@ function draw(){
 function render(){
   var preset=s.mode==='preset';
   // random mode shows nothing; preset mode is always disclosed (product principle 2)
-  $('mode').textContent=preset?'Pemenang doorprize ini ditentukan oleh panitia.':'';
+  $('mode').textContent=preset?'Hadiah spesial dari panitia.':'';
   $('mode').hidden=!preset;$('mode').classList.toggle('preset',preset);
   $('serial').textContent='No. '+pad(s.log.length+1);
   $('count').textContent=s.names.length?s.names.length+' nama di roda':'Roda kosong. Isi nama peserta di halaman admin.';
