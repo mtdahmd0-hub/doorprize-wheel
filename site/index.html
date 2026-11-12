@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Picker Wheel Doorprize</title>
+<style>
+:root{--bg:#faf7f2;--fg:#1f1b16;--card:#fff;--line:#e3dccf;--accent:#d9480f;--muted:#6b6358}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17140f;--fg:#f3ede2;--card:#221e17;--line:#3a3328;--accent:#ff8a4c;--muted:#a79d8d}}
+:root[data-theme="dark"]{--bg:#17140f;--fg:#f3ede2;--card:#221e17;--line:#3a3328;--accent:#ff8a4c;--muted:#a79d8d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))}
+main{max-width:760px;margin:0 auto;display:grid;gap:14px}
+h1{font-size:1.4rem;margin:4px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.banner{padding:10px 12px;border-radius:10px;font-weight:600;text-align:center;background:color-mix(in srgb,var(--accent) 15%,transparent);border:1px dashed var(--accent)}
+.stage{position:relative;width:min(100%,480px);margin:0 auto}
+canvas{width:100%;height:auto;display:block}
+.pin{position:absolute;left:50%;top:-6px;transform:translateX(-50%);font-size:2.2rem;color:var(--accent);line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+button{padding:12px 28px;border:0;border-radius:10px;background:var(--accent);color:#fff;font:inherit;font-size:1.1rem;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px}
+#result{font-size:1.5rem;font-weight:800;text-align:center;min-height:1.6em;margin-top:10px}
+.muted{color:var(--muted);font-size:.85rem;text-align:center}
+ol{margin:6px 0 0;padding-left:22px}
+</style>
+</head>
+<body>
+<main>
+<h1>🎡 Picker Wheel Doorprize</h1>
+<div id="banner" class="banner"></div>
+<div class="card">
+  <div class="stage"><canvas id="c" width="800" height="800" role="img" aria-label="Roda undian"></canvas><div class="pin" aria-hidden="true">▼</div></div>
+  <div class="row"><button id="spin">PUTAR!</button></div>
+  <p class="muted" id="count"></p>
+  <div id="result" aria-live="polite"></div>
+</div>
+<div class="card"><strong>Pemenang</strong><ol id="log"></ol></div>
+</main>
+<script>
+(function(){
+var KEY='doorprize',TAU=2*Math.PI;
+var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[]};
+function load(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)))}catch(e){return Object.assign({},DEF)}}
+function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}}
+
+var cv=document.getElementById('c'),ctx=cv.getContext('2d'),spinBtn=document.getElementById('spin');
+var banner=document.getElementById('banner'),resEl=document.getElementById('result'),logEl=document.getElementById('log'),countEl=document.getElementById('count');
+var cols=['#e8590c','#f08c00','#2f9e44','#1c7ed6','#7048e8','#d6336c','#0c8599','#5c940d'];
+var s=load(),rot=0,spinning=false;
+
+// Segment under the pointer (top, angle -PI/2) for a given rotation.
+function indexAt(r,n){var seg=TAU/n;return Math.floor((((-Math.PI/2-r)%TAU)+TAU)%TAU/seg)%n}
+// Preset mode: take the next queued winner that is still on the wheel; otherwise random.
+function pick(names,mode,queue,rand){
+  if(mode==='preset'){var low=names.map(function(x){return x.toLowerCase()});
+    while(queue.length){var i=low.indexOf(queue.shift().toLowerCase());if(i>=0)return i}}
+  return Math.floor(rand()*names.length);
+}
+
+function draw(){
+  var n=s.names,W=cv.width,R=W/2-8;
+  ctx.clearRect(0,0,W,W);
+  if(!n.length){ctx.fillStyle='#888';ctx.font='36px system-ui';ctx.textAlign='center';ctx.fillText('Roda kosong',W/2,W/2);return}
+  var seg=TAU/n.length,fs=Math.min(48,Math.max(16,400/n.length));
+  for(var i=0;i<n.length;i++){
+    var a=rot+i*seg;
+    ctx.beginPath();ctx.moveTo(W/2,W/2);ctx.arc(W/2,W/2,R,a,a+seg);ctx.closePath();
+    // avoid same colour on the wrap-around seam
+    ctx.fillStyle=cols[(i===n.length-1&&i%cols.length===0&&i)?1:i%cols.length];ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();
+    ctx.save();ctx.translate(W/2,W/2);ctx.rotate(a+seg/2);
+    ctx.fillStyle='#fff';ctx.font='bold '+fs+'px system-ui';ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText(n[i].length>18?n[i].slice(0,17)+'…':n[i],R-20,0);ctx.restore();
+  }
+  ctx.beginPath();ctx.arc(W/2,W/2,28,0,TAU);ctx.fillStyle='#fff';ctx.fill();
+}
+function render(){
+  banner.textContent=s.mode==='preset'?'🎭 Mode seru-seruan: hasil sudah ditentukan panitia, roda hanya untuk hiburan':'🎲 Mode acak murni: semua peserta punya peluang sama';
+  countEl.textContent=s.names.length+' peserta di roda · tekan Spasi atau tombol PUTAR';
+  logEl.innerHTML='';s.log.forEach(function(w){var li=document.createElement('li');li.textContent=w;logEl.appendChild(li)});
+  spinBtn.disabled=spinning||!s.names.length;
+  draw();
+}
+
+function spin(){
+  if(spinning)return;
+  s=load();var n=s.names.slice();
+  if(!n.length){resEl.textContent='Isi nama dulu di halaman admin';return}
+  spinning=true;resEl.textContent='';
+  var q=s.winners.slice(),i=pick(n,s.mode,q,Math.random);
+  s.winners=q;save(s);render(); // consume the queue now, so admin sees it
+  var seg=TAU/n.length,jitter=(Math.random()-.5)*seg*.7;
+  var tgt=((-Math.PI/2-(i+.5)*seg+jitter)%TAU+TAU)%TAU,cur=(rot%TAU+TAU)%TAU;
+  var delta=(tgt-cur+TAU)%TAU+TAU*(5+Math.floor(Math.random()*3));
+  var start=rot,dur=n.length<2?1500:5000,t0=performance.now();
+  (function step(t){
+    var k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,4);
+    rot=start+delta*e;draw();
+    if(k<1)requestAnimationFrame(step);else done(n[indexAt(rot,n.length)]);
+  })(t0);
+}
+function done(name){
+  resEl.textContent='🎉 '+name+' dapat doorprize!';
+  s=load();s.log.push(name);save(s);
+  setTimeout(function(){ // let the audience see the winning slice before it disappears
+    s=load();
+    if(s.remove){var j=s.names.indexOf(name);if(j>=0)s.names.splice(j,1);save(s)}
+    spinning=false;render();
+  },s.remove?1500:0);
+}
+
+spinBtn.addEventListener('click',spin);
+document.addEventListener('keydown',function(e){if(e.code==='Space'){e.preventDefault();spin()}});
+window.addEventListener('storage',function(e){if(e.key===KEY&&!spinning){s=load();render()}});
+render();
+
+// self-check: the slice under the pointer is always the one that was picked
+for(var n=1;n<=40;n++)for(var i=0;i<n;i++)for(var j=-.35;j<=.35;j+=.35){var sg=TAU/n;
+  console.assert(indexAt(-Math.PI/2-(i+.5)*sg+j*sg+TAU*7,n)===i,'indexAt',n,i,j)}
+console.assert(pick(['A','B','C'],'preset',['x','c'],Math.random)===2,'pick preset');
+console.assert(pick(['A','B'],'random',['b'],function(){return 0})===0,'pick random');
+})();
+</script>
+</body>
+</html>

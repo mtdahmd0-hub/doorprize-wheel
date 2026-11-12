@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Admin Doorprize</title>
+<style>
+:root{--bg:#faf7f2;--fg:#1f1b16;--card:#fff;--line:#e3dccf;--accent:#d9480f;--muted:#6b6358;--ok:#2f9e44;--bad:#c92a2a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17140f;--fg:#f3ede2;--card:#221e17;--line:#3a3328;--accent:#ff8a4c;--muted:#a79d8d;--ok:#69db7c;--bad:#ff8787}}
+:root[data-theme="dark"]{--bg:#17140f;--fg:#f3ede2;--card:#221e17;--line:#3a3328;--accent:#ff8a4c;--muted:#a79d8d;--ok:#69db7c;--bad:#ff8787}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
+main{max-width:760px;margin:0 auto;display:grid;gap:14px}
+h1{font-size:1.4rem;margin:4px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
+textarea,select{width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit}
+textarea{min-height:110px;resize:vertical}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}}
+.chk{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.9rem}
+.chk input{width:auto;margin:0}
+.chk label{margin:0;color:var(--fg)}
+button,a.btn{padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+a.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.status{font-size:.85rem;color:var(--muted);margin-left:auto}
+ul.check{list-style:none;margin:6px 0 0;padding:0;font-size:.9rem}
+ul.check li.ok::before{content:"✓ ";color:var(--ok);font-weight:700}
+ul.check li.bad{color:var(--bad)}
+ul.check li.bad::before{content:"✗ ";font-weight:700}
+.hint{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<div class="row"><h1>⚙️ Admin Doorprize</h1><a class="btn primary" href="./" target="_blank" rel="noopener" style="margin-left:auto">Buka roda ↗</a></div>
+<p class="hint">Pengaturan disimpan di browser ini. Buka halaman roda di browser yang sama (tab/jendela lain, mis. di proyektor) — perubahan langsung tampil.</p>
+
+<div class="card">
+  <div class="grid">
+    <div>
+      <label for="names">Daftar peserta (satu per baris)</label>
+      <textarea id="names"></textarea>
+      <p class="hint" id="ncount"></p>
+    </div>
+    <div>
+      <label for="mode">Mode undian</label>
+      <select id="mode">
+        <option value="random">Acak murni</option>
+        <option value="preset">Ditentukan panitia (banner terbuka, seru-seruan)</option>
+      </select>
+      <div id="presetBox">
+        <label for="winners">Antrean pemenang, urut (satu per baris)</label>
+        <textarea id="winners" placeholder="Nama sesuai daftar peserta"></textarea>
+        <ul class="check" id="wcheck"></ul>
+        <p class="hint">Setiap putaran memakai nama teratas. Nama yang tidak ada di roda dilewati; bila antrean habis, roda kembali acak.</p>
+      </div>
+    </div>
+  </div>
+  <div class="chk"><input type="checkbox" id="remove"><label for="remove">Hapus pemenang dari roda setelah menang</label></div>
+</div>
+
+<div class="card">
+  <div class="row"><strong>Riwayat pemenang</strong><span class="status" id="status"></span></div>
+  <ol id="log"></ol>
+  <div class="row">
+    <button id="clearLog">Hapus riwayat</button>
+    <button id="reset">Reset semua</button>
+  </div>
+</div>
+</main>
+<script>
+(function(){
+var KEY='doorprize';
+var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[]};
+function load(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)))}catch(e){return Object.assign({},DEF)}}
+function save(s){try{localStorage.setItem(KEY,JSON.stringify(s));stat('Tersimpan ✓')}catch(e){stat('Gagal menyimpan — storage browser diblokir')}}
+function $(id){return document.getElementById(id)}
+function lines(el){return el.value.split('\n').map(function(x){return x.trim()}).filter(Boolean)}
+function stat(t){$('status').textContent=t}
+
+function fill(){ // state -> form; skip the field being typed in
+  var s=load(),a=document.activeElement;
+  if(a!==$('names'))$('names').value=s.names.join('\n');
+  if(a!==$('winners'))$('winners').value=s.winners.join('\n');
+  $('mode').value=s.mode;$('remove').checked=s.remove;
+  $('log').innerHTML='';s.log.forEach(function(w){var li=document.createElement('li');li.textContent=w;$('log').appendChild(li)});
+  view(s);
+}
+function view(s){
+  $('presetBox').hidden=s.mode!=='preset';
+  $('ncount').textContent=s.names.length+' peserta';
+  var low=s.names.map(function(x){return x.toLowerCase()});
+  $('wcheck').innerHTML='';
+  s.winners.forEach(function(w){var li=document.createElement('li'),ok=low.indexOf(w.toLowerCase())>=0;
+    li.className=ok?'ok':'bad';li.textContent=w+(ok?'':' — tidak ada di daftar peserta');$('wcheck').appendChild(li)});
+}
+function commit(){ // form -> state
+  var s=load();
+  s.names=lines($('names'));s.winners=lines($('winners'));s.mode=$('mode').value;s.remove=$('remove').checked;
+  save(s);view(s);
+}
+
+['names','winners'].forEach(function(id){$(id).addEventListener('input',commit)});
+['mode','remove'].forEach(function(id){$(id).addEventListener('change',commit)});
+$('clearLog').addEventListener('click',function(){if(confirm('Hapus riwayat pemenang?')){var s=load();s.log=[];save(s);fill()}});
+$('reset').addEventListener('click',function(){if(confirm('Reset semua pengaturan ke awal?')){try{localStorage.removeItem(KEY)}catch(e){}fill();stat('Direset')}});
+window.addEventListener('storage',function(e){if(e.key===KEY){fill();stat('Diperbarui dari roda')}});
+fill();
+})();
+</script>
+</body>
+</html>
