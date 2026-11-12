@@ -51,6 +51,7 @@ h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(3.4rem,6v
 .serial b{font-family:var(--display);font-weight:400;font-size:clamp(2.2rem,3.2vw,3rem);color:var(--volt);line-height:1;font-variant-numeric:tabular-nums}
 .mode{margin:0;padding:11px 14px;border-radius:12px;font-weight:600;font-size:.98rem;line-height:1.35;border:1px solid var(--rule);color:var(--soft)}
 .mode.preset{background:var(--alert);border-color:#ef6b6b;color:#fff}
+.mode[hidden]{display:none}
 .spin{appearance:none;border:0;cursor:pointer;width:100%;padding:20px 24px;border-radius:14px;background:linear-gradient(180deg,#ffd95a,var(--volt) 55%,var(--volt-2));color:var(--navy);font-family:var(--display);font-size:1.7rem;letter-spacing:.08em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 12px 26px -8px rgba(3,20,60,.7);transition:filter .2s,transform .12s,opacity .2s}
 .spin:hover{filter:brightness(1.06)}
 .spin:active{transform:translateY(2px)}
@@ -270,8 +271,9 @@ function draw(){
 }
 function render(){
   var preset=s.mode==='preset';
-  $('mode').textContent=preset?'Hasil sudah ditentukan panitia. Roda hanya untuk hiburan.':'Acak murni. Semua peserta punya peluang yang sama.';
-  $('mode').classList.toggle('preset',preset);
+  // random mode shows nothing; preset mode is always disclosed (product principle 2)
+  $('mode').textContent=preset?'Hasil sudah ditentukan panitia. Roda hanya untuk hiburan.':'';
+  $('mode').hidden=!preset;$('mode').classList.toggle('preset',preset);
   $('serial').textContent='No. '+pad(s.log.length+1);
   $('count').textContent=s.names.length?s.names.length+' nama di roda':'Roda kosong. Isi nama peserta di halaman admin.';
   var ol=$('log');ol.innerHTML='';
