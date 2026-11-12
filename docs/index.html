@@ -3,52 +3,153 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Picker Wheel Doorprize</title>
+<meta name="color-scheme" content="dark">
+<title>Undian Doorprize</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Bodoni+Moda:opsz,wght@6..96,400..900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#faf7f2;--fg:#1f1b16;--card:#fff;--line:#e3dccf;--accent:#d9480f;--muted:#6b6358}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17140f;--fg:#f3ede2;--card:#221e17;--line:#3a3328;--accent:#ff8a4c;--muted:#a79d8d}}
-:root[data-theme="dark"]{--bg:#17140f;--fg:#f3ede2;--card:#221e17;--line:#3a3328;--accent:#ff8a4c;--muted:#a79d8d}
+:root{
+  --ink-0:#070b13;--ink-1:#0e1522;--ink-2:#172033;
+  --gold:#e8d6aa;--gold-2:#c9b27a;--gold-3:#8f7c4f;
+  --paper:#f6efdd;--muted:#b3a684;--seal:#d23a3f;--seal-ink:#a3202a;
+  --rule:rgba(232,214,170,.22);
+  --display:"Bodoni Moda",Didot,"Bodoni 72",serif;
+  --ui:"Archivo","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))}
-main{max-width:760px;margin:0 auto;display:grid;gap:14px}
-h1{font-size:1.4rem;margin:4px 0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
-.banner{padding:10px 12px;border-radius:10px;font-weight:600;text-align:center;background:color-mix(in srgb,var(--accent) 15%,transparent);border:1px dashed var(--accent)}
-.stage{position:relative;width:min(100%,480px);margin:0 auto}
-canvas{width:100%;height:auto;display:block}
-.pin{position:absolute;left:50%;top:-6px;transform:translateX(-50%);font-size:2.2rem;color:var(--accent);line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.3)}
-button{padding:12px 28px;border:0;border-radius:10px;background:var(--accent);color:#fff;font:inherit;font-size:1.1rem;font-weight:700;cursor:pointer}
-button:disabled{opacity:.5;cursor:default}
-.row{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px}
-#result{font-size:1.5rem;font-weight:800;text-align:center;min-height:1.6em;margin-top:10px}
-.muted{color:var(--muted);font-size:.85rem;text-align:center}
-ol{margin:6px 0 0;padding-left:22px}
+html,body{margin:0;min-height:100%}
+body{background:var(--ink-0);color:var(--paper);font-family:var(--ui);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+::selection{background:var(--gold);color:var(--ink-0)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+*{scrollbar-color:var(--gold-3) transparent;scrollbar-width:thin}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(120% 90% at 30% 50%,transparent 40%,rgba(3,5,9,.85) 100%)}
+
+.stage{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr);gap:clamp(24px,4vw,72px);align-items:center;min-height:100dvh;max-width:1680px;margin:0 auto;padding:clamp(16px,3vw,48px)}
+.wheel{position:relative;width:min(100%,88dvh);aspect-ratio:1;margin:auto}
+#c{display:block;width:100%;height:100%;filter:drop-shadow(0 28px 50px rgba(0,0,0,.6))}
+.pointer{position:absolute;left:50%;top:-4.2%;width:8.4%;translate:-50% 0;transform-origin:50% 26%;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55));z-index:2}
+
+.panel{display:flex;flex-direction:column;gap:clamp(18px,2.4vh,28px);min-width:0}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(2.6rem,4.6vw,5rem);line-height:.92;letter-spacing:-.02em;margin:0;font-variation-settings:"opsz" 96;text-wrap:balance}
+h1 span{display:block;font-weight:500;font-style:italic;color:var(--gold)}
+.wave{display:block;width:100%;height:14px;color:var(--gold-2);opacity:.7}
+.serial{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:12px 2px}
+.serial small{font-size:.8rem;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);font-variation-settings:"wdth" 80}
+.serial b{font-family:var(--display);font-size:clamp(2rem,3vw,2.8rem);font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums lining-nums;letter-spacing:.02em}
+.mode{margin:0;padding:12px 16px;border-radius:12px;font-weight:600;font-size:1rem;line-height:1.35;border:1px solid var(--rule);color:var(--gold)}
+.mode.preset{background:var(--seal-ink);border-color:#d6545c;color:#fff4ee}
+.spin{appearance:none;border:0;cursor:pointer;width:100%;padding:22px 24px;border-radius:14px;background:var(--gold);color:var(--ink-0);font-family:var(--ui);font-weight:800;font-size:1.3rem;letter-spacing:.16em;text-transform:uppercase;font-variation-settings:"wdth" 112;outline:1px solid rgba(7,11,19,.45);outline-offset:-7px;box-shadow:0 14px 30px -8px rgba(0,0,0,.6);transition:background .2s,transform .12s,opacity .2s}
+.spin:hover{background:#f3e5bf}
+.spin:active{transform:translateY(2px)}
+.spin:focus-visible{outline:2px solid var(--paper);outline-offset:4px}
+.spin:disabled{opacity:.45;cursor:default;transform:none}
+.hint{margin:-12px 0 0;text-align:center;color:var(--muted);font-size:.85rem}
+.hint kbd{font-family:var(--ui);font-size:.75rem;border:1px solid var(--rule);border-radius:6px;padding:1px 7px;color:var(--gold)}
+.ledger h2{margin:0 0 8px;font-size:.8rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);font-variation-settings:"wdth" 80}
+.ledger ol{list-style:none;margin:0;padding:0;max-height:min(30vh,260px);overflow:auto}
+.ledger li{display:flex;align-items:baseline;gap:10px;padding:7px 0}
+.ledger li .no{font-size:.82rem;color:var(--gold-2);font-variant-numeric:tabular-nums;letter-spacing:.08em;flex:none}
+.ledger li .dots{flex:1;border-bottom:1px dotted var(--gold-3);translate:0 -4px;min-width:20px}
+.ledger li .nm{font-family:var(--display);font-size:1.35rem;font-weight:600;text-align:right;overflow-wrap:anywhere}
+.ledger .empty{color:var(--muted);font-style:italic;padding:6px 0}
+.count{margin:0;color:var(--muted);font-size:.9rem}
+
+/* reveal */
+.reveal{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:16px;background:rgba(4,7,12,.74);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:fade .35s ease-out both}
+.reveal[hidden]{display:none}
+.cert{position:relative;width:min(100%,1000px);padding:clamp(36px,6vw,80px) clamp(20px,5vw,72px);text-align:center;background:var(--ink-1);border:1px solid var(--gold-2);border-radius:16px;outline:1px solid var(--rule);outline-offset:-12px;overflow:hidden}
+.cert .ros{position:absolute;left:50%;top:50%;width:min(130%,1100px);translate:-50% -50%;color:var(--gold);opacity:.16;pointer-events:none}
+.cert .ros path{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.8s cubic-bezier(.16,1,.3,1) .1s forwards}
+.cert>*:not(.ros,.seal){position:relative}
+.cert-no{margin:0;font-size:clamp(.85rem,1.4vw,1.1rem);letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-variant-numeric:tabular-nums}
+.cert-lead{margin:18px 0 0;font-size:clamp(.9rem,1.5vw,1.15rem);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+/* room-readable on a projector: deliberately above the 6rem display ceiling */
+.cert-name{margin:.12em 0 .1em;font-family:var(--display);font-weight:900;font-size:clamp(2.8rem,8.4vw,7.5rem);line-height:1;letter-spacing:-.02em;font-variation-settings:"opsz" 96;color:var(--paper);overflow-wrap:anywhere;text-wrap:balance;animation:stamp .7s cubic-bezier(.2,1.5,.35,1) .25s both}
+.cert-sub{margin:0;font-family:var(--display);font-style:italic;font-size:clamp(1.1rem,2.2vw,1.8rem);color:var(--gold)}
+.cert-note{margin:18px auto 0;max-width:40ch;font-size:.9rem;color:#ffb3b0}
+.cert-note[hidden]{display:none}
+.seal{position:absolute;right:clamp(14px,4vw,56px);bottom:clamp(14px,4vw,48px);width:clamp(96px,12vw,150px);aspect-ratio:1;border-radius:50%;border:3px double var(--seal);color:var(--seal);display:grid;place-content:center;gap:2px;font-weight:800;letter-spacing:.16em;font-size:clamp(.7rem,1vw,.9rem);text-transform:uppercase;rotate:-14deg;opacity:.9;animation:seal .55s cubic-bezier(.2,1.6,.35,1) .8s both}
+.seal b{font-family:var(--display);font-size:1.6em;letter-spacing:0}
+.next{margin-top:clamp(22px,4vh,40px);appearance:none;cursor:pointer;background:transparent;color:var(--gold);border:1px solid var(--gold-2);border-radius:12px;padding:12px 28px;font:700 1rem var(--ui);letter-spacing:.16em;text-transform:uppercase;transition:background .2s,color .2s}
+.next:hover{background:var(--gold);color:var(--ink-0)}
+@keyframes fade{from{opacity:0}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes stamp{0%{opacity:0;transform:scale(1.4);filter:blur(6px)}60%{opacity:1;filter:blur(0)}100%{transform:scale(1)}}
+@keyframes seal{0%{opacity:0;transform:scale(1.8)}100%{opacity:.9;transform:scale(1)}}
+
+@media (max-width:880px){
+  .stage{grid-template-columns:1fr;align-items:start;padding-top:40px}
+  .wheel{width:min(100%,560px)}
+  .seal{position:relative;right:auto;bottom:auto;margin:20px auto 0}
+}
+@media (prefers-reduced-motion:reduce){
+  .cert-name,.seal,.reveal{animation:none}
+  .cert .ros path{animation:none;stroke-dashoffset:0}
+}
 </style>
 </head>
 <body>
-<main>
-<h1>🎡 Picker Wheel Doorprize</h1>
-<div id="banner" class="banner"></div>
-<div class="card">
-  <div class="stage"><canvas id="c" width="800" height="800" role="img" aria-label="Roda undian"></canvas><div class="pin" aria-hidden="true">▼</div></div>
-  <div class="row"><button id="spin">PUTAR!</button></div>
-  <p class="muted" id="count"></p>
-  <div id="result" aria-live="polite"></div>
-</div>
-<div class="card"><strong>Pemenang</strong><ol id="log"></ol></div>
+<!--
+THESIS: the doorprize as a security-printed note: the room watches an engraved medallion turn and stop, and the winner is issued like a numbered bill. Refuses the neon game-show wheel with confetti.
+OWN-WORLD: intaglio blue-black ground, champagne guilloche linework, segments in saturated Rupiah denomination inks, microprinted rim, Bodoni engraving for names, Archivo caps microtext, red seal stamp.
+STORY: guests see the draw number and remaining names, watch the wheel spin, read the winner from the back of the room; preset mode is always disclosed.
+FIRST VIEWPORT: wheel at ~88vh left with pointer on top; right column: title, draw serial, mode band, spin plate, numbered ledger.
+FORM: banknote guilloche security print, candidate 5 of 7, seed 5aceaf5b. Raises: snap-and-settle stamp reveal (depot blind), concentric ring law (event display), full-strength inks (OSPAAAL), numbered issue ledger (ekiben).
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+<canvas id="bg" aria-hidden="true"></canvas>
+<main class="stage">
+  <section class="wheel" aria-label="Roda undian">
+    <canvas id="c" width="1000" height="1000" role="img" aria-label="Roda undian berisi nama peserta"></canvas>
+    <svg class="pointer" id="pointer" viewBox="0 0 80 112" aria-hidden="true">
+      <path d="M40 108 L13 34 A29 29 0 1 1 67 34 Z" fill="#e8d6aa" stroke="#6d5d38" stroke-width="2"/>
+      <path d="M40 96 L20 36 M40 96 L60 36" stroke="#8f7c4f" stroke-width="1" fill="none"/>
+      <circle cx="40" cy="29" r="15" fill="none" stroke="#8f7c4f" stroke-width="1.2"/>
+      <circle cx="40" cy="29" r="9" fill="#c0242f" stroke="#6d1218" stroke-width="1.5"/>
+    </svg>
+  </section>
+  <aside class="panel">
+    <h1>Undian<span>Doorprize</span></h1>
+    <svg class="wave" viewBox="0 0 400 14" preserveAspectRatio="none" aria-hidden="true"><path id="wavePath" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+    <div class="serial"><small>Undian ke</small><b id="serial">No. 001</b></div>
+    <p id="mode" class="mode" aria-live="polite"></p>
+    <button id="spin" class="spin">Putar roda</button>
+    <p class="hint">atau tekan <kbd>Spasi</kbd></p>
+    <div class="ledger"><h2>Pemenang</h2><ol id="log"></ol></div>
+    <p class="count" id="count"></p>
+  </aside>
 </main>
+
+<div class="reveal" id="reveal" hidden role="dialog" aria-modal="true" aria-labelledby="certName">
+  <div class="cert">
+    <svg class="ros" viewBox="-500 -500 1000 1000" aria-hidden="true"><path id="rosPath" pathLength="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+    <p class="cert-no" id="certNo">No. 001</p>
+    <p class="cert-lead">Selamat kepada</p>
+    <p class="cert-name" id="certName"></p>
+    <p class="cert-sub">mendapat doorprize</p>
+    <p class="cert-note" id="certNote" hidden>Hasil ini sudah ditentukan panitia. Roda hanya untuk hiburan.</p>
+    <div class="seal" aria-hidden="true"><span>Pemenang</span><b id="sealNo">001</b></div>
+    <button class="next" id="next">Lanjut</button>
+  </div>
+</div>
+
 <script>
 (function(){
 var KEY='doorprize',TAU=2*Math.PI;
 var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[]};
 function load(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)))}catch(e){return Object.assign({},DEF)}}
 function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}}
+function $(id){return document.getElementById(id)}
 
-var cv=document.getElementById('c'),ctx=cv.getContext('2d'),spinBtn=document.getElementById('spin');
-var banner=document.getElementById('banner'),resEl=document.getElementById('result'),logEl=document.getElementById('log'),countEl=document.getElementById('count');
-var cols=['#e8590c','#f08c00','#2f9e44','#1c7ed6','#7048e8','#d6336c','#0c8599','#5c940d'];
-var s=load(),rot=0,spinning=false;
+var cv=$('c'),ctx=cv.getContext('2d'),W=cv.width,C=W/2;
+var INKS=['#b3172f','#1f4fa8','#21704b','#6a3a9e','#8b5426','#0f6e73','#4a5d68']; // Rupiah denomination inks
+var REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var s=load(),rot=0,spinning=false,revealOpen=false,pending=null,wheelImg=null,hubImg=null,lastTick=null;
 
+function pad(n){return String(n).padStart(3,'0')}
 // Segment under the pointer (top, angle -PI/2) for a given rotation.
 function indexAt(r,n){var seg=TAU/n;return Math.floor((((-Math.PI/2-r)%TAU)+TAU)%TAU/seg)%n}
 // Preset mode: take the next queued winner that is still on the wheel; otherwise random.
@@ -57,63 +158,176 @@ function pick(names,mode,queue,rand){
     while(queue.length){var i=low.indexOf(queue.shift().toLowerCase());if(i>=0)return i}}
   return Math.floor(rand()*names.length);
 }
+// Guilloche rosette: r(t)=r0+a*sin(k t+ph)
+function rosette(g,r0,a,k,ph,cx,cy){
+  g.beginPath();
+  for(var t=0;t<=TAU+.001;t+=TAU/720){var r=r0+a*Math.sin(k*t+ph);
+    var x=cx+r*Math.cos(t),y=cy+r*Math.sin(t);t?g.lineTo(x,y):g.moveTo(x,y)}
+  g.closePath();g.stroke();
+}
+function off(){var o=document.createElement('canvas');o.width=o.height=W;return o}
 
-function draw(){
-  var n=s.names,W=cv.width,R=W/2-8;
-  ctx.clearRect(0,0,W,W);
-  if(!n.length){ctx.fillStyle='#888';ctx.font='36px system-ui';ctx.textAlign='center';ctx.fillText('Roda kosong',W/2,W/2);return}
-  var seg=TAU/n.length,fs=Math.min(48,Math.max(16,400/n.length));
-  for(var i=0;i<n.length;i++){
-    var a=rot+i*seg;
-    ctx.beginPath();ctx.moveTo(W/2,W/2);ctx.arc(W/2,W/2,R,a,a+seg);ctx.closePath();
-    // avoid same colour on the wrap-around seam
-    ctx.fillStyle=cols[(i===n.length-1&&i%cols.length===0&&i)?1:i%cols.length];ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();
-    ctx.save();ctx.translate(W/2,W/2);ctx.rotate(a+seg/2);
-    ctx.fillStyle='#fff';ctx.font='bold '+fs+'px system-ui';ctx.textAlign='right';ctx.textBaseline='middle';
-    ctx.fillText(n[i].length>18?n[i].slice(0,17)+'…':n[i],R-20,0);ctx.restore();
+function buildWheel(){
+  var n=s.names,o=off(),g=o.getContext('2d'),RS=446;
+  g.translate(C,C);
+  // rim band with microprint
+  g.beginPath();g.arc(0,0,492,0,TAU);g.fillStyle='#0b111c';g.fill();
+  g.strokeStyle='#e8d6aa';g.lineWidth=3;g.beginPath();g.arc(0,0,489,0,TAU);g.stroke();
+  g.lineWidth=1;g.strokeStyle='rgba(232,214,170,.55)';g.beginPath();g.arc(0,0,482,0,TAU);g.stroke();
+  g.beginPath();g.arc(0,0,452,0,TAU);g.stroke();
+  g.font='600 14px Archivo, sans-serif';g.fillStyle='rgba(232,214,170,.72)';g.textAlign='center';g.textBaseline='middle';
+  var txt='UNDIAN DOORPRIZE • ',adv=[],tot=0,i,ch;
+  for(i=0;i<txt.length;i++){adv[i]=g.measureText(txt[i]).width+3.2;tot+=adv[i]}
+  var circ=TAU*467,reps=Math.max(1,Math.floor(circ/tot)),sc=circ/(reps*tot),a=0;
+  for(var r=0;r<reps;r++)for(i=0;i<txt.length;i++){
+    var w=adv[i]*sc,mid=a+w/2/467;
+    g.save();g.rotate(mid);g.translate(0,-467);g.fillText(txt[i],0,0);g.restore();a+=w/467;
   }
-  ctx.beginPath();ctx.arc(W/2,W/2,28,0,TAU);ctx.fillStyle='#fff';ctx.fill();
+  if(!n.length){
+    g.beginPath();g.arc(0,0,RS,0,TAU);g.fillStyle='#172033';g.fill();
+    g.fillStyle='#b3a684';g.font='italic 600 40px "Bodoni Moda", serif';g.fillText('Roda kosong',0,150);
+    wheelImg=o;return;
+  }
+  var seg=TAU/n.length;
+  for(i=0;i<n.length;i++){
+    var ci=i%INKS.length;if(i===n.length-1&&i>0&&ci===0)ci=3;
+    g.beginPath();g.moveTo(0,0);g.arc(0,0,RS,i*seg,(i+1)*seg);g.closePath();g.fillStyle=INKS[ci];g.fill();
+  }
+  // guilloche over the inks
+  g.save();g.beginPath();g.arc(0,0,RS,0,TAU);g.clip();
+  g.lineWidth=1.1;g.strokeStyle='rgba(255,255,255,.12)';
+  for(i=0;i<15;i++){rosette(g,96+i*24,7+(i%3)*3,24+2*(i%4),0,0,0);rosette(g,96+i*24,7+(i%3)*3,24+2*(i%4),Math.PI,0,0)}
+  g.strokeStyle='rgba(0,0,0,.18)';
+  for(i=0;i<8;i++)rosette(g,140+i*40,16,9,i*.4,0,0);
+  g.restore();
+  // separators and names
+  for(i=0;i<n.length;i++){
+    g.save();g.rotate(i*seg);
+    g.strokeStyle='rgba(232,214,170,.9)';g.lineWidth=2;g.beginPath();g.moveTo(90,0);g.lineTo(RS,0);g.stroke();
+    g.rotate(seg/2);
+    var fs=Math.min(50,Math.max(16,560/n.length)),maxW=RS-120,label=n[i];
+    g.font='800 '+fs+'px "Bodoni Moda", serif';
+    while(g.measureText(label).width>maxW&&fs>15){fs--;g.font='800 '+fs+'px "Bodoni Moda", serif'}
+    while(g.measureText(label).width>maxW&&label.length>2)label=label.slice(0,-2)+'…';
+    g.fillStyle='#fff8ea';g.textAlign='right';g.textBaseline='middle';
+    g.shadowColor='rgba(0,0,0,.45)';g.shadowBlur=6;g.shadowOffsetY=2;
+    g.fillText(label,RS-26,0);g.restore();
+  }
+  g.strokeStyle='#e8d6aa';g.lineWidth=2.5;g.beginPath();g.arc(0,0,RS,0,TAU);g.stroke();
+  // pegs at each boundary: what the pointer clicks against
+  for(i=0;i<n.length;i++){var pa=i*seg,px=Math.cos(pa)*RS,py=Math.sin(pa)*RS;
+    var pg=g.createRadialGradient(px-2,py-2,1,px,py,8);pg.addColorStop(0,'#fff3d0');pg.addColorStop(1,'#a8925c');
+    g.beginPath();g.arc(px,py,7,0,TAU);g.fillStyle=pg;g.fill()}
+  wheelImg=o;
+}
+function buildHub(){
+  var o=off(),g=o.getContext('2d');g.translate(C,C);
+  g.beginPath();g.arc(0,0,96,0,TAU);g.fillStyle='#0b111c';g.fill();
+  g.beginPath();g.arc(0,0,88,0,TAU);g.fillStyle='#e8d6aa';g.fill();
+  g.save();g.beginPath();g.arc(0,0,86,0,TAU);g.clip();g.lineWidth=.9;g.strokeStyle='rgba(14,21,34,.28)';
+  for(var i=0;i<7;i++){rosette(g,22+i*10,5,12,0,0,0);rosette(g,22+i*10,5,12,Math.PI,0,0)}
+  g.restore();
+  g.strokeStyle='#6d5d38';g.lineWidth=2;g.beginPath();g.arc(0,0,88,0,TAU);g.stroke();
+  g.beginPath();g.arc(0,0,78,0,TAU);g.lineWidth=1;g.stroke();
+  hubImg=o;
+}
+function draw(){
+  ctx.clearRect(0,0,W,W);
+  ctx.save();ctx.translate(C,C);ctx.rotate(rot);ctx.drawImage(wheelImg,-C,-C);ctx.restore();
+  ctx.drawImage(hubImg,0,0);
+  ctx.fillStyle='#0e1522';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='700 15px Archivo, sans-serif';ctx.fillText('N O.',C,C-30);
+  ctx.font='800 44px "Bodoni Moda", serif';ctx.fillText(pad(s.log.length+1),C,C+12);
 }
 function render(){
-  banner.textContent=s.mode==='preset'?'🎭 Mode seru-seruan: hasil sudah ditentukan panitia, roda hanya untuk hiburan':'🎲 Mode acak murni: semua peserta punya peluang sama';
-  countEl.textContent=s.names.length+' peserta di roda · tekan Spasi atau tombol PUTAR';
-  logEl.innerHTML='';s.log.forEach(function(w){var li=document.createElement('li');li.textContent=w;logEl.appendChild(li)});
-  spinBtn.disabled=spinning||!s.names.length;
-  draw();
+  var preset=s.mode==='preset';
+  $('mode').textContent=preset?'Hasil sudah ditentukan panitia. Roda hanya untuk hiburan.':'Acak murni. Semua peserta punya peluang yang sama.';
+  $('mode').classList.toggle('preset',preset);
+  $('serial').textContent='No. '+pad(s.log.length+1);
+  $('count').textContent=s.names.length?s.names.length+' nama di roda':'Roda kosong. Isi nama peserta di halaman admin.';
+  var ol=$('log');ol.innerHTML='';
+  if(!s.log.length){var e=document.createElement('li');e.className='empty';e.textContent='Belum ada pemenang.';ol.appendChild(e)}
+  s.log.forEach(function(w,i){var li=document.createElement('li');
+    li.innerHTML='<span class="no">No. '+pad(i+1)+'</span><span class="dots"></span><span class="nm"></span>';
+    li.lastChild.textContent=w;ol.appendChild(li)});
+  ol.scrollTop=ol.scrollHeight;
+  $('spin').disabled=spinning||!s.names.length;
+  buildWheel();draw();
 }
 
+var ptr=$('pointer');
+function flick(){
+  if(REDUCED)return;
+  ptr.style.transition='none';ptr.style.transform='rotate(-18deg)';
+  requestAnimationFrame(function(){ptr.style.transition='transform .22s cubic-bezier(.2,1.6,.4,1)';ptr.style.transform='rotate(0)'});
+}
 function spin(){
   if(spinning)return;
   s=load();var n=s.names.slice();
-  if(!n.length){resEl.textContent='Isi nama dulu di halaman admin';return}
-  spinning=true;resEl.textContent='';
+  if(!n.length)return;
+  spinning=true;$('spin').disabled=true;
   var q=s.winners.slice(),i=pick(n,s.mode,q,Math.random);
-  s.winners=q;save(s);render(); // consume the queue now, so admin sees it
+  s.winners=q;save(s); // consume the queue now, so admin sees it
   var seg=TAU/n.length,jitter=(Math.random()-.5)*seg*.7;
   var tgt=((-Math.PI/2-(i+.5)*seg+jitter)%TAU+TAU)%TAU,cur=(rot%TAU+TAU)%TAU;
-  var delta=(tgt-cur+TAU)%TAU+TAU*(5+Math.floor(Math.random()*3));
-  var start=rot,dur=n.length<2?1500:5000,t0=performance.now();
+  var delta=(tgt-cur+TAU)%TAU+TAU*(REDUCED?1:6+Math.floor(Math.random()*3));
+  var wind=REDUCED?0:Math.min(.35,seg*.6),windDur=REDUCED?0:420,dur=REDUCED?1400:6200;
+  var start=rot,t0=performance.now();lastTick=null;
   (function step(t){
-    var k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,4);
-    rot=start+delta*e;draw();
-    if(k<1)requestAnimationFrame(step);else done(n[indexAt(rot,n.length)]);
+    var e=t-t0;
+    if(e<windDur){var k0=e/windDur;rot=start-wind*Math.sin(k0*Math.PI/2)}
+    else{var k=Math.min(1,(e-windDur)/dur),ez=1-Math.pow(1-k,4);rot=start-wind+(delta+wind)*ez}
+    var b=Math.floor(((-Math.PI/2-rot)%TAU+TAU)%TAU/seg);
+    if(lastTick!==null&&b!==lastTick)flick();lastTick=b;
+    draw();
+    if(e<windDur+dur)requestAnimationFrame(step);else done(n[indexAt(rot,n.length)]);
   })(t0);
 }
 function done(name){
-  resEl.textContent='🎉 '+name+' dapat doorprize!';
-  s=load();s.log.push(name);save(s);
-  setTimeout(function(){ // let the audience see the winning slice before it disappears
-    s=load();
-    if(s.remove){var j=s.names.indexOf(name);if(j>=0)s.names.splice(j,1);save(s)}
-    spinning=false;render();
-  },s.remove?1500:0);
+  s=load();s.log.push(name);save(s);pending=name;
+  var no=pad(s.log.length);
+  $('certNo').textContent='Doorprize No. '+no;$('sealNo').textContent=no;
+  $('certName').textContent=name;$('certNote').hidden=s.mode!=='preset';
+  var rv=$('reveal');rv.hidden=false;revealOpen=true;
+  // restart CSS animations
+  rv.querySelectorAll('.cert-name,.seal,.ros path').forEach(function(el){el.style.animation='none';el.offsetWidth;el.style.animation=''});
+  $('next').focus();
+}
+function closeReveal(){
+  if(!revealOpen)return;
+  $('reveal').hidden=true;revealOpen=false;
+  s=load();
+  if(s.remove&&pending!==null){var j=s.names.indexOf(pending);if(j>=0){s.names.splice(j,1);save(s)}}
+  pending=null;spinning=false;render();$('spin').focus();
 }
 
-spinBtn.addEventListener('click',spin);
-document.addEventListener('keydown',function(e){if(e.code==='Space'){e.preventDefault();spin()}});
-window.addEventListener('storage',function(e){if(e.key===KEY&&!spinning){s=load();render()}});
-render();
+// static ornaments
+(function(){var d='';for(var x=0;x<=400;x+=2){d+=(x?'L':'M')+x+' '+(7+5*Math.sin(x/8)).toFixed(2)}$('wavePath').setAttribute('d',d);
+  var p='';for(var j=0;j<16;j++){var ph=j%2?Math.PI:0;for(var t=0;t<=TAU+.001;t+=TAU/1200){var r=250+(j>>1)*30+9*Math.sin(48*t+ph);p+=(t?'L':'M')+(r*Math.cos(t)).toFixed(1)+' '+(r*Math.sin(t)).toFixed(1)}p+='Z'}
+  $('rosPath').setAttribute('d',p)})();
+var bg=$('bg');
+function drawBg(){
+  var dpr=Math.min(2,devicePixelRatio||1),w=innerWidth,h=innerHeight;bg.width=w*dpr;bg.height=h*dpr;
+  var g=bg.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,w,h);
+  var rc=cv.getBoundingClientRect(),cx=rc.left+rc.width/2,cy=rc.top+rc.height/2+scrollY;
+  g.lineWidth=1;g.strokeStyle='rgba(232,214,170,.055)';
+  for(var i=0;i<26;i++)rosette(g,rc.width*.55+i*36,10+(i%4)*4,36+(i%5)*2,i*.3,cx,cy);
+}
+addEventListener('resize',drawBg);
+
+$('spin').addEventListener('click',spin);
+$('next').addEventListener('click',closeReveal);
+document.addEventListener('keydown',function(e){
+  if(e.code==='Space'||e.key==='Enter'||e.key==='Escape'){
+    if(revealOpen){e.preventDefault();closeReveal()}
+    else if(e.code==='Space'&&!e.repeat){e.preventDefault();spin()}
+  }
+});
+addEventListener('storage',function(e){if(e.key===KEY&&!spinning){s=load();render()}});
+
+buildHub();render();drawBg();
+// canvas text needs the web fonts; redraw once they are in
+Promise.all([document.fonts.load('800 40px "Bodoni Moda"'),document.fonts.load('600 14px Archivo')]).then(function(){render()},function(){});
 
 // self-check: the slice under the pointer is always the one that was picked
 for(var n=1;n<=40;n++)for(var i=0;i<n;i++)for(var j=-.35;j<=.35;j+=.35){var sg=TAU/n;

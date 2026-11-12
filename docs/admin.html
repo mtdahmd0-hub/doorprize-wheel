@@ -3,113 +3,316 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex">
 <title>Admin Doorprize</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Bodoni+Moda:opsz,wght@6..96,400..900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#faf7f2;--fg:#1f1b16;--card:#fff;--line:#e3dccf;--accent:#d9480f;--muted:#6b6358;--ok:#2f9e44;--bad:#c92a2a}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17140f;--fg:#f3ede2;--card:#221e17;--line:#3a3328;--accent:#ff8a4c;--muted:#a79d8d;--ok:#69db7c;--bad:#ff8787}}
-:root[data-theme="dark"]{--bg:#17140f;--fg:#f3ede2;--card:#221e17;--line:#3a3328;--accent:#ff8a4c;--muted:#a79d8d;--ok:#69db7c;--bad:#ff8787}
+:root{
+  --ink-0:#070b13;--ink-1:#0e1522;--ink-2:#172033;--ink-3:#212c42;
+  --gold:#e8d6aa;--gold-2:#c9b27a;--gold-3:#8f7c4f;
+  --paper:#f6efdd;--muted:#b3a684;--seal:#e05a5f;--seal-ink:#a3202a;--ok:#7fd1a4;
+  --rule:rgba(232,214,170,.18);
+  --display:"Bodoni Moda",Didot,"Bodoni 72",serif;
+  --ui:"Archivo","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
-main{max-width:760px;margin:0 auto;display:grid;gap:14px}
-h1{font-size:1.4rem;margin:4px 0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
-label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
-textarea,select{width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit}
-textarea{min-height:110px;resize:vertical}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media (max-width:600px){.grid{grid-template-columns:1fr}}
-.chk{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.9rem}
-.chk input{width:auto;margin:0}
-.chk label{margin:0;color:var(--fg)}
-button,a.btn{padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
-a.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.status{font-size:.85rem;color:var(--muted);margin-left:auto}
-ul.check{list-style:none;margin:6px 0 0;padding:0;font-size:.9rem}
-ul.check li.ok::before{content:"✓ ";color:var(--ok);font-weight:700}
-ul.check li.bad{color:var(--bad)}
-ul.check li.bad::before{content:"✗ ";font-weight:700}
-.hint{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+html,body{margin:0}
+body{min-height:100dvh;background:var(--ink-0);color:var(--paper);font-family:var(--ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+::selection{background:var(--gold);color:var(--ink-0)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+*{scrollbar-color:var(--gold-3) transparent;scrollbar-width:thin}
 [hidden]{display:none!important}
+svg.i{width:1.1em;height:1.1em;flex:none;vertical-align:-.15em}
+
+/* lock */
+.lock{min-height:100dvh;display:grid;place-items:center;padding:16px;position:relative;overflow:hidden}
+.lock .ros{position:absolute;width:min(160vw,1400px);left:50%;top:50%;translate:-50% -50%;color:var(--gold);opacity:.08;pointer-events:none}
+.lock form{position:relative;width:min(100%,400px);background:var(--ink-1);border:1px solid var(--gold-3);border-radius:16px;padding:36px 28px 28px;outline:1px solid var(--rule);outline-offset:-9px}
+.lock h1{font-family:var(--display);font-weight:900;font-size:2.2rem;line-height:1;margin:0 0 6px;letter-spacing:-.02em}
+.lock p.lede{margin:0 0 22px;color:var(--muted)}
+.err{color:#ffb3b0;font-size:.9rem;min-height:1.4em;margin:8px 0 0}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font:inherit;font-size:.85rem;cursor:pointer;margin-top:14px}
+.linkbtn:hover{color:var(--gold)}
+
+/* app */
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px clamp(16px,3vw,32px);background:rgba(7,11,19,.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.top h1{margin:0;font-family:var(--display);font-weight:900;font-size:1.6rem;letter-spacing:-.02em;line-height:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--rule);color:var(--gold)}
+.chip.preset{background:var(--seal-ink);border-color:#d6545c;color:#fff4ee}
+.status{font-size:.82rem;color:var(--muted);margin-left:auto}
+.wrap{max-width:1180px;margin:0 auto;padding:clamp(16px,3vw,32px);display:grid;grid-template-columns:1fr 1.15fr;gap:clamp(16px,2.4vw,28px);align-items:start}
+.col{display:grid;gap:clamp(16px,2.4vw,28px)}
+.box{background:var(--ink-1);border:1px solid var(--rule);border-radius:14px;padding:20px}
+.box h2{margin:0;font-family:var(--display);font-weight:700;font-size:1.35rem;letter-spacing:-.01em}
+.box .sub{margin:4px 0 14px;color:var(--muted);font-size:.88rem}
+.hd{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.tally{font-family:var(--display);font-size:1.5rem;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums}
+label.f{display:block;font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+textarea,input[type=password]{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--ink-3);background:var(--ink-0);color:var(--paper);font:inherit;font-size:1rem;caret-color:var(--gold);transition:border-color .15s}
+textarea{min-height:150px;resize:vertical;line-height:1.6}
+#names{min-height:clamp(260px,46vh,520px)}
+textarea:focus,input:focus{border-color:var(--gold-2);outline:none;box-shadow:0 0 0 3px rgba(232,214,170,.14)}
+::placeholder{color:#7d755f}
+
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:10px;border:1px solid var(--gold-3);background:transparent;color:var(--gold);font:700 .88rem var(--ui);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:background .15s,color .15s,border-color .15s}
+.btn:hover{background:rgba(232,214,170,.1);border-color:var(--gold-2)}
+.btn.primary{background:var(--gold);color:var(--ink-0);border-color:var(--gold)}
+.btn.primary:hover{background:#f3e5bf}
+.btn.danger{color:#ffb3b0;border-color:#6b2a2e}
+.btn.danger:hover{background:rgba(224,90,95,.12);border-color:var(--seal)}
+.btn.wide{width:100%;padding:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* mode selector */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modes label{position:relative;display:block;padding:14px 14px 14px 44px;border-radius:12px;border:1px solid var(--ink-3);background:var(--ink-0);cursor:pointer;transition:border-color .15s,background .15s}
+.modes label:hover{border-color:var(--gold-3)}
+.modes input{position:absolute;opacity:0}
+.modes .dot{position:absolute;left:14px;top:16px;width:18px;height:18px;border-radius:50%;border:2px solid var(--gold-3)}
+.modes b{display:block;font-size:1rem}
+.modes span.d{display:block;color:var(--muted);font-size:.84rem;margin-top:2px}
+.modes input:checked+.dot{border-color:var(--gold);background:radial-gradient(circle,var(--gold) 0 4px,transparent 5px)}
+.modes label:has(input:checked){border-color:var(--gold-2);background:var(--ink-2)}
+.modes label.pre:has(input:checked){border-color:#d6545c;background:#2a1418}
+.modes input:focus-visible+.dot{outline:2px solid var(--gold);outline-offset:3px}
+
+/* queue validation ledger */
+ol.q{list-style:none;margin:10px 0 0;padding:0;counter-reset:q}
+ol.q li{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dotted var(--ink-3);counter-increment:q}
+ol.q li::before{content:"No. " counter(q,decimal-leading-zero);font-size:.78rem;color:var(--gold-2);font-variant-numeric:tabular-nums;letter-spacing:.06em;width:52px;flex:none}
+ol.q li .nm{font-family:var(--display);font-weight:600;font-size:1.1rem}
+ol.q li.ok svg{color:var(--ok)}
+ol.q li.bad{color:#ffb3b0}
+ol.q li.bad .why{font-size:.82rem;margin-left:auto}
+.note{font-size:.84rem;color:var(--muted);margin:10px 0 0}
+
+/* toggle */
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer}
+.toggle input{position:absolute;opacity:0}
+.toggle .sw{position:relative;width:48px;height:28px;border-radius:999px;background:var(--ink-3);flex:none;transition:background .2s}
+.toggle .sw::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:transform .2s cubic-bezier(.16,1,.3,1),background .2s}
+.toggle input:checked+.sw{background:var(--gold-3)}
+.toggle input:checked+.sw::after{transform:translateX(20px);background:var(--gold)}
+.toggle input:focus-visible+.sw{outline:2px solid var(--gold);outline-offset:3px}
+
+ol.log{list-style:none;margin:8px 0 14px;padding:0;max-height:240px;overflow:auto}
+ol.log li{display:flex;gap:10px;align-items:baseline;padding:6px 0}
+ol.log .no{font-size:.78rem;color:var(--gold-2);font-variant-numeric:tabular-nums;letter-spacing:.06em;flex:none}
+ol.log .dots{flex:1;border-bottom:1px dotted var(--gold-3);translate:0 -4px}
+ol.log .nm{font-family:var(--display);font-weight:600;font-size:1.1rem}
+.empty{color:var(--muted);font-style:italic}
+dialog{background:var(--ink-1);color:var(--paper);border:1px solid var(--gold-3);border-radius:16px;padding:24px;width:min(92vw,400px)}
+dialog::backdrop{background:rgba(4,7,12,.7)}
+dialog h3{margin:0 0 4px;font-family:var(--display);font-size:1.4rem}
+
+@media (max-width:860px){.wrap{grid-template-columns:1fr}.modes{grid-template-columns:1fr}.status{margin-left:0;width:100%}}
 </style>
 </head>
 <body>
-<main>
-<div class="row"><h1>⚙️ Admin Doorprize</h1><a class="btn primary" href="./" target="_blank" rel="noopener" style="margin-left:auto">Buka roda ↗</a></div>
-<p class="hint">Pengaturan disimpan di browser ini. Buka halaman roda di browser yang sama (tab/jendela lain, mis. di proyektor) — perubahan langsung tampil.</p>
+<!--
+Admin surface inherits the wheel's banknote world (see index.html contract): intaglio ground, champagne rules, Bodoni headings, Archivo caps labels, numbered ledgers, red seal ink reserved for preset mode and destructive actions. Operate mode: task first, expression in details.
+-->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+</svg>
 
-<div class="card">
-  <div class="grid">
-    <div>
-      <label for="names">Daftar peserta (satu per baris)</label>
-      <textarea id="names"></textarea>
-      <p class="hint" id="ncount"></p>
+<!-- LOCK SCREEN -->
+<section class="lock" id="lock" hidden>
+  <svg class="ros" viewBox="-500 -500 1000 1000" aria-hidden="true"><path id="rosPath" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+  <form id="lockForm" autocomplete="off">
+    <h1>Admin Doorprize</h1>
+    <p class="lede" id="lockLede"></p>
+    <label class="f" for="pw1">Password</label>
+    <input type="password" id="pw1" required minlength="4" autocomplete="current-password">
+    <div id="pw2Box"><label class="f" for="pw2">Ulangi password</label><input type="password" id="pw2" minlength="4" autocomplete="new-password"></div>
+    <p class="err" id="lockErr" role="alert"></p>
+    <button class="btn primary wide" id="lockBtn" type="submit"></button>
+    <button class="linkbtn" id="forgot" type="button">Lupa password? Reset semua data</button>
+  </form>
+</section>
+
+<!-- ADMIN -->
+<div id="app" hidden>
+  <header class="top">
+    <h1>Admin Doorprize</h1>
+    <span class="chip" id="modeChip"></span>
+    <span class="status" id="status" aria-live="polite"></span>
+    <div class="row">
+      <a class="btn primary" href="./" target="_blank" rel="noopener"><svg class="i"><use href="#i-out"/></svg>Buka roda</a>
+      <button class="btn" id="lockNow" type="button"><svg class="i"><use href="#i-lock"/></svg>Kunci</button>
     </div>
-    <div>
-      <label for="mode">Mode undian</label>
-      <select id="mode">
-        <option value="random">Acak murni</option>
-        <option value="preset">Ditentukan panitia (banner terbuka, seru-seruan)</option>
-      </select>
-      <div id="presetBox">
-        <label for="winners">Antrean pemenang, urut (satu per baris)</label>
-        <textarea id="winners" placeholder="Nama sesuai daftar peserta"></textarea>
-        <ul class="check" id="wcheck"></ul>
-        <p class="hint">Setiap putaran memakai nama teratas. Nama yang tidak ada di roda dilewati; bila antrean habis, roda kembali acak.</p>
-      </div>
+  </header>
+  <main class="wrap">
+    <div class="col">
+      <section class="box">
+        <div class="hd"><h2>Peserta</h2><span class="tally" id="ncount">0</span></div>
+        <p class="sub">Satu nama per baris. Perubahan langsung tampil di roda.</p>
+        <textarea id="names" aria-label="Daftar peserta" spellcheck="false" placeholder="Budi&#10;Siti&#10;Andi"></textarea>
+      </section>
+      <section class="box">
+        <h2>Riwayat pemenang</h2>
+        <ol class="log" id="log"></ol>
+        <button class="btn danger" id="clearLog" type="button">Hapus riwayat</button>
+      </section>
     </div>
-  </div>
-  <div class="chk"><input type="checkbox" id="remove"><label for="remove">Hapus pemenang dari roda setelah menang</label></div>
+    <div class="col">
+      <section class="box">
+        <h2>Mode undian</h2>
+        <p class="sub">Mode ditentukan selalu diumumkan di layar roda.</p>
+        <div class="modes" role="radiogroup" aria-label="Mode undian">
+          <label><input type="radio" name="mode" value="random"><span class="dot"></span><b>Acak murni</b><span class="d">Semua peserta punya peluang sama.</span></label>
+          <label class="pre"><input type="radio" name="mode" value="preset"><span class="dot"></span><b>Ditentukan panitia</b><span class="d">Roda berhenti pada antrean di bawah.</span></label>
+        </div>
+        <div id="presetBox">
+          <label class="f" for="winners">Antrean pemenang, urut</label>
+          <textarea id="winners" spellcheck="false" placeholder="Satu nama per baris, sama persis dengan daftar peserta"></textarea>
+          <ol class="q" id="wcheck"></ol>
+          <p class="note">Tiap putaran memakai nama teratas. Nama yang tidak ada di roda dilewati. Bila antrean habis, roda kembali acak.</p>
+        </div>
+      </section>
+      <section class="box">
+        <label class="toggle"><span><b>Hapus pemenang dari roda</b><br><span class="sub" style="margin:0">Setelah pengumuman ditutup, nama pemenang keluar dari roda.</span></span><input type="checkbox" id="remove"><span class="sw"></span></label>
+      </section>
+      <section class="box">
+        <h2>Keamanan &amp; data</h2>
+        <p class="sub">Password dan data hanya tersimpan di browser ini.</p>
+        <div class="row">
+          <button class="btn" id="changePw" type="button">Ganti password</button>
+          <button class="btn danger" id="reset" type="button">Reset peserta &amp; riwayat</button>
+        </div>
+      </section>
+    </div>
+  </main>
 </div>
 
-<div class="card">
-  <div class="row"><strong>Riwayat pemenang</strong><span class="status" id="status"></span></div>
-  <ol id="log"></ol>
-  <div class="row">
-    <button id="clearLog">Hapus riwayat</button>
-    <button id="reset">Reset semua</button>
-  </div>
-</div>
-</main>
+<dialog id="pwDlg">
+  <form method="dialog" id="pwForm">
+    <h3>Ganti password</h3>
+    <label class="f" for="old">Password lama</label><input type="password" id="old" required autocomplete="current-password">
+    <label class="f" for="new1">Password baru</label><input type="password" id="new1" required minlength="4" autocomplete="new-password">
+    <label class="f" for="new2">Ulangi password baru</label><input type="password" id="new2" required minlength="4" autocomplete="new-password">
+    <p class="err" id="pwErr" role="alert"></p>
+    <div class="row"><button class="btn primary" value="ok">Simpan</button><button class="btn" value="cancel" formnovalidate>Batal</button></div>
+  </form>
+</dialog>
+
 <script>
 (function(){
-var KEY='doorprize';
+var KEY='doorprize',AUTH='doorprize-auth',SESS='doorprize-unlocked',TAU=2*Math.PI;
 var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[]};
 function load(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)))}catch(e){return Object.assign({},DEF)}}
-function save(s){try{localStorage.setItem(KEY,JSON.stringify(s));stat('Tersimpan ✓')}catch(e){stat('Gagal menyimpan — storage browser diblokir')}}
+function save(s){try{localStorage.setItem(KEY,JSON.stringify(s));stat('Tersimpan')}catch(e){stat('Gagal menyimpan: penyimpanan browser diblokir')}}
 function $(id){return document.getElementById(id)}
 function lines(el){return el.value.split('\n').map(function(x){return x.trim()}).filter(Boolean)}
 function stat(t){$('status').textContent=t}
+function pad(n){return String(n).padStart(3,'0')}
+function svg(id){return '<svg class="i"><use href="#'+id+'"/></svg>'}
 
-function fill(){ // state -> form; skip the field being typed in
+/* ---------- password ----------
+   ponytail: client-side gate only. It keeps guests away from the committee laptop's admin screen;
+   anyone with devtools on that same browser can still read localStorage. Real protection needs a server. */
+function hex(b){return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('')}
+function unhex(h){return new Uint8Array(h.match(/../g).map(function(x){return parseInt(x,16)}))}
+function derive(pw,salt,it){
+  return crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits'])
+    .then(function(k){return crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:salt,iterations:it},k,256)}).then(hex);
+}
+function getAuth(){try{return JSON.parse(localStorage.getItem(AUTH))}catch(e){return null}}
+function setPw(pw){var salt=crypto.getRandomValues(new Uint8Array(16)),it=150000;
+  return derive(pw,salt,it).then(function(h){localStorage.setItem(AUTH,JSON.stringify({salt:hex(salt),it:it,hash:h}))})}
+function checkPw(pw){var a=getAuth();if(!a)return Promise.resolve(false);
+  return derive(pw,unhex(a.salt),a.it).then(function(h){return h===a.hash})}
+function unlocked(){try{return sessionStorage.getItem(SESS)==='1'}catch(e){return false}}
+function setUnlocked(v){try{v?sessionStorage.setItem(SESS,'1'):sessionStorage.removeItem(SESS)}catch(e){}}
+
+function showLock(){
+  var first=!getAuth();
+  $('app').hidden=true;$('lock').hidden=false;
+  $('lockLede').textContent=first?'Buat password untuk membuka halaman admin di browser ini. Minimal 4 karakter.':'Masukkan password admin.';
+  $('pw2Box').hidden=!first;$('pw2').required=first;$('forgot').hidden=first;
+  $('pw1').autocomplete=first?'new-password':'current-password';
+  $('lockBtn').textContent=first?'Buat password & masuk':'Buka admin';
+  $('lockErr').textContent='';$('pw1').value=$('pw2').value='';$('pw1').focus();
+}
+function showApp(){$('lock').hidden=true;$('app').hidden=false;fill()}
+
+$('lockForm').addEventListener('submit',function(e){
+  e.preventDefault();var pw=$('pw1').value,first=!getAuth();
+  if(!window.crypto||!crypto.subtle){$('lockErr').textContent='Browser ini tidak mendukung enkripsi. Buka lewat https.';return}
+  if(pw.length<4){$('lockErr').textContent='Password minimal 4 karakter.';return}
+  $('lockBtn').disabled=true;
+  var p=first
+    ?($('pw2').value!==pw?Promise.reject('Kedua password tidak sama.'):setPw(pw).then(function(){return true}))
+    :checkPw(pw);
+  p.then(function(ok){
+    if(!ok){$('lockErr').textContent='Password salah. Coba lagi.';$('pw1').select();return}
+    setUnlocked(true);showApp();
+  },function(msg){$('lockErr').textContent=typeof msg==='string'?msg:'Gagal menyimpan password.'})
+   .then(function(){$('lockBtn').disabled=false});
+});
+$('forgot').addEventListener('click',function(){
+  if(!confirm('Reset password? Semua data ikut dihapus: peserta, antrean, dan riwayat. Tidak bisa dibatalkan.'))return;
+  try{localStorage.removeItem(AUTH);localStorage.removeItem(KEY)}catch(e){}
+  setUnlocked(false);showLock();
+});
+$('lockNow').addEventListener('click',function(){setUnlocked(false);showLock()});
+
+$('changePw').addEventListener('click',function(){$('pwErr').textContent='';$('pwForm').reset();$('pwDlg').showModal()});
+$('pwForm').addEventListener('submit',function(e){
+  if(e.submitter&&e.submitter.value==='cancel')return;
+  e.preventDefault();
+  if($('new1').value!==$('new2').value){$('pwErr').textContent='Password baru tidak sama.';return}
+  checkPw($('old').value).then(function(ok){
+    if(!ok){$('pwErr').textContent='Password lama salah.';return}
+    return setPw($('new1').value).then(function(){$('pwDlg').close();stat('Password diganti')});
+  });
+});
+
+/* ---------- settings ---------- */
+function fill(){ // state -> form; never overwrite the field being typed in
   var s=load(),a=document.activeElement;
   if(a!==$('names'))$('names').value=s.names.join('\n');
   if(a!==$('winners'))$('winners').value=s.winners.join('\n');
-  $('mode').value=s.mode;$('remove').checked=s.remove;
-  $('log').innerHTML='';s.log.forEach(function(w){var li=document.createElement('li');li.textContent=w;$('log').appendChild(li)});
+  document.querySelector('input[name=mode][value='+s.mode+']').checked=true;
+  $('remove').checked=s.remove;
+  var ol=$('log');ol.innerHTML='';
+  if(!s.log.length)ol.innerHTML='<li class="empty">Belum ada pemenang.</li>';
+  s.log.forEach(function(w,i){var li=document.createElement('li');
+    li.innerHTML='<span class="no">No. '+pad(i+1)+'</span><span class="dots"></span><span class="nm"></span>';li.lastChild.textContent=w;ol.appendChild(li)});
   view(s);
 }
 function view(s){
-  $('presetBox').hidden=s.mode!=='preset';
-  $('ncount').textContent=s.names.length+' peserta';
-  var low=s.names.map(function(x){return x.toLowerCase()});
-  $('wcheck').innerHTML='';
+  var pre=s.mode==='preset';
+  $('presetBox').hidden=!pre;
+  $('modeChip').textContent=pre?'Ditentukan panitia':'Acak murni';$('modeChip').classList.toggle('preset',pre);
+  $('ncount').textContent=s.names.length;
+  var low=s.names.map(function(x){return x.toLowerCase()}),q=$('wcheck');q.innerHTML='';
   s.winners.forEach(function(w){var li=document.createElement('li'),ok=low.indexOf(w.toLowerCase())>=0;
-    li.className=ok?'ok':'bad';li.textContent=w+(ok?'':' — tidak ada di daftar peserta');$('wcheck').appendChild(li)});
+    li.className=ok?'ok':'bad';li.innerHTML=svg(ok?'i-ok':'i-x')+'<span class="nm"></span>'+(ok?'':'<span class="why">tidak ada di daftar peserta</span>');
+    li.querySelector('.nm').textContent=w;q.appendChild(li)});
 }
-function commit(){ // form -> state
+function commit(){
   var s=load();
-  s.names=lines($('names'));s.winners=lines($('winners'));s.mode=$('mode').value;s.remove=$('remove').checked;
+  s.names=lines($('names'));s.winners=lines($('winners'));
+  s.mode=document.querySelector('input[name=mode]:checked').value;s.remove=$('remove').checked;
   save(s);view(s);
 }
-
 ['names','winners'].forEach(function(id){$(id).addEventListener('input',commit)});
-['mode','remove'].forEach(function(id){$(id).addEventListener('change',commit)});
-$('clearLog').addEventListener('click',function(){if(confirm('Hapus riwayat pemenang?')){var s=load();s.log=[];save(s);fill()}});
-$('reset').addEventListener('click',function(){if(confirm('Reset semua pengaturan ke awal?')){try{localStorage.removeItem(KEY)}catch(e){}fill();stat('Direset')}});
-window.addEventListener('storage',function(e){if(e.key===KEY){fill();stat('Diperbarui dari roda')}});
-fill();
+document.querySelectorAll('input[name=mode]').forEach(function(r){r.addEventListener('change',commit)});
+$('remove').addEventListener('change',commit);
+$('clearLog').addEventListener('click',function(){if(confirm('Hapus riwayat pemenang? Nomor undian kembali ke 001.')){var s=load();s.log=[];save(s);fill()}});
+$('reset').addEventListener('click',function(){if(confirm('Reset peserta, antrean, dan riwayat ke awal? Password tetap.')){try{localStorage.removeItem(KEY)}catch(e){}fill();stat('Direset')}});
+addEventListener('storage',function(e){if(e.key===KEY&&!$('app').hidden){fill();stat('Diperbarui dari roda')}});
+
+(function(){var p='';for(var j=0;j<6;j++){for(var t=0;t<=TAU+.001;t+=TAU/900){var r=150+j*55+(24-j*2)*Math.sin((16+j*2)*t+j);p+=(t?'L':'M')+(r*Math.cos(t)).toFixed(1)+' '+(r*Math.sin(t)).toFixed(1)}p+='Z'}$('rosPath').setAttribute('d',p)})();
+unlocked()&&getAuth()?showApp():showLock();
 })();
 </script>
 </body>
