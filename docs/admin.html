@@ -168,8 +168,8 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
         <h2>Mode undian</h2>
         <p class="sub">Mode ditentukan selalu diumumkan di layar roda.</p>
         <div class="modes" role="radiogroup" aria-label="Mode undian">
-          <label><input type="radio" name="mode" value="random"><span class="dot"></span><b>Acak murni</b><span class="d">Semua peserta punya peluang sama.</span></label>
-          <label class="pre"><input type="radio" name="mode" value="preset"><span class="dot"></span><b>Ditentukan panitia</b><span class="d">Undian berhenti pada antrean di bawah.</span></label>
+          <label><input type="radio" name="mode" value="random"><span class="dot"></span><b>Mode 1 · Acak</b><span class="d">Semua peserta punya peluang sama.</span></label>
+          <label class="pre"><input type="radio" name="mode" value="preset"><span class="dot"></span><b>Mode 2 · Pemenang ditentukan</b><span class="d">Undian berhenti pada antrean di bawah.</span></label>
         </div>
         <div id="presetBox">
           <label class="f" for="winners">Antrean pemenang, urut</label>
@@ -292,7 +292,7 @@ function fill(){ // state -> form; never overwrite the field being typed in
 function view(s){
   var pre=s.mode==='preset';
   $('presetBox').hidden=!pre;
-  $('modeChip').textContent=pre?'Ditentukan panitia':'Acak murni';$('modeChip').classList.toggle('preset',pre);
+  $('modeChip').textContent=pre?'Mode 2 · Ditentukan':'Mode 1 · Acak';$('modeChip').classList.toggle('preset',pre);
   $('ncount').textContent=s.names.length;
   var low=s.names.map(function(x){return x.toLowerCase()}),q=$('wcheck');q.innerHTML='';
   s.winners.forEach(function(w){var li=document.createElement('li'),ok=low.indexOf(w.toLowerCase())>=0;
