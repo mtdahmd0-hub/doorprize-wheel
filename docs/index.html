@@ -37,7 +37,14 @@ body{color:var(--white);font-family:var(--ui);overflow-x:hidden;-webkit-font-smo
 .stage{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr);gap:clamp(24px,4vw,64px);align-items:center;min-height:100dvh;max-width:1680px;margin:0 auto;padding:clamp(16px,3vw,44px)}
 .stage.surge{animation:surge .6s cubic-bezier(.36,.07,.19,.97) both}
 .wheel{position:relative;width:min(100%,84dvh);aspect-ratio:1;margin:5% auto 0}
-#c{display:block;width:100%;height:100%;filter:drop-shadow(0 26px 40px rgba(4,30,80,.5))}
+#c{position:relative;display:block;width:100%;height:100%;filter:drop-shadow(0 26px 40px rgba(4,30,80,.5))}
+/* stage spotlights sweeping slowly behind the wheel */
+.beams{position:absolute;inset:-28%;border-radius:50%;pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,rgba(255,244,200,.16) 0deg 5deg,transparent 5deg 30deg);
+  -webkit-mask:radial-gradient(circle,#000 32%,transparent 70%);mask:radial-gradient(circle,#000 32%,transparent 70%);
+  animation:sweep 48s linear infinite}
+@keyframes sweep{to{rotate:360deg}}
+@media (prefers-reduced-motion:reduce){.beams{animation:none}}
 .pin{position:absolute;left:50%;top:-6.5%;width:8.6%;translate:-50% 0;transform-origin:50% 28%;filter:drop-shadow(0 6px 8px rgba(4,30,80,.5));z-index:2}
 
 .panel{display:flex;flex-direction:column;gap:clamp(14px,2vh,22px);min-width:0;background:var(--panel);border-radius:18px;padding:clamp(20px,2.4vw,32px);box-shadow:0 24px 60px -20px rgba(4,24,70,.7)}
@@ -141,6 +148,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 </div>
 <main class="stage" id="stage">
   <section class="wheel" aria-label="Roda undian">
+    <div class="beams" aria-hidden="true"></div>
     <canvas id="c" width="1000" height="1000" role="img" aria-label="Roda undian berisi nama peserta"></canvas>
     <svg class="pin" id="pin" viewBox="0 0 80 112" aria-hidden="true">
       <defs><linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#f5a623"/><stop offset=".5" stop-color="#ffd95a"/><stop offset="1" stop-color="#f5a623"/></linearGradient></defs>
@@ -188,7 +196,7 @@ function load(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(
 function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}}
 function $(id){return document.getElementById(id)}
 
-var cv=$('c'),ctx=cv.getContext('2d'),W=cv.width,C=W/2,RS=452,BULBS=28;
+var cv=$('c'),ctx=cv.getContext('2d'),W=cv.width,C=W/2,RS=452,BULBS=36,lights='idle',chasePos=0;
 // event palette: fill + text colour
 var TONES=[['#0d47a1','#ffffff'],['#ffc928','#08245a'],['#1e88e5','#ffffff'],['#f28c28','#08245a'],['#00838f','#ffffff'],['#6cc8f2','#08245a']];
 var REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -242,26 +250,59 @@ function buildWheel(){
   g.strokeStyle='#ffffff';g.lineWidth=5;g.beginPath();g.arc(0,0,RS,0,TAU);g.stroke();
   wheelImg=o;
 }
-function draw(){
+// polished gold for the marquee ring
+function goldFill(){
+  if(!ctx.createConicGradient){var l=ctx.createLinearGradient(0,0,W,W);l.addColorStop(0,'#fff1b8');l.addColorStop(.5,'#b9861f');l.addColorStop(1,'#ffe08a');return l}
+  var g=ctx.createConicGradient(-.6,C,C),st=['#fff4c8','#c8962e','#ffe08a','#8f6214','#fff1b8','#b9861f','#ffe7a0','#9a6b17','#fff4c8'];
+  st.forEach(function(c,i){g.addColorStop(i/(st.length-1),c)});return g;
+}
+var GOLD=goldFill();
+// bulb brightness 0..1 by light show: idle = slow travelling shimmer, spin = comet chase, win = alternate blink
+function bulbLevel(i,now){
+  if(lights==='win')return (i+Math.floor(now/140))%2?1:.25;
+  if(lights==='spin'){var d=((i-chasePos)%BULBS+BULBS)%BULBS,best=0;
+    for(var h=0;h<3;h++){var dd=Math.abs(((d-h*BULBS/3)%BULBS+BULBS)%BULBS-BULBS/2)-BULBS/2;best=Math.max(best,Math.exp(-dd*dd/3))}
+    return .18+.82*best}
+  var w=.5+.5*Math.sin(now/520-i*TAU/12);return .22+.78*Math.pow(w,5);
+}
+function mix(a,b,t){return 'rgb('+[0,1,2].map(function(k){return Math.round(a[k]+(b[k]-a[k])*t)}).join(',')+')'}
+var sparks=[];
+function draw(now){
+  now=now||performance.now();
   ctx.clearRect(0,0,W,W);
-  // stage ring (static): white-blue rim with chasing lights
-  var rim=ctx.createLinearGradient(0,C-496,0,C+496);
-  rim.addColorStop(0,'#ffffff');rim.addColorStop(.5,'#9cc9f2');rim.addColorStop(1,'#1a63c7');
-  ctx.beginPath();ctx.arc(C,C,496,0,TAU);ctx.fillStyle=rim;ctx.fill();
-  ctx.beginPath();ctx.arc(C,C,470,0,TAU);ctx.fillStyle='#0b3f91';ctx.fill();
-  for(var b=0;b<BULBS;b++){
-    var a=b/BULBS*TAU-Math.PI/2,x=C+Math.cos(a)*482,y=C+Math.sin(a)*482,on=(b+chase)%3===0;
-    ctx.beginPath();ctx.arc(x,y,7.5,0,TAU);
-    ctx.fillStyle=on?'#fff6c2':'#ffc928';ctx.fill();
-    if(on){ctx.beginPath();ctx.arc(x,y,13,0,TAU);ctx.fillStyle='rgba(255,224,110,.35)';ctx.fill()}
+  // marquee ring: gold bezel, navy channel, gold inner rule
+  ctx.beginPath();ctx.arc(C,C,499,0,TAU);ctx.fillStyle=GOLD;ctx.fill();
+  ctx.beginPath();ctx.arc(C,C,488,0,TAU);ctx.fillStyle='#061d47';ctx.fill();
+  ctx.beginPath();ctx.arc(C,C,463,0,TAU);ctx.fillStyle=GOLD;ctx.fill();
+  ctx.lineWidth=1.5;ctx.strokeStyle='rgba(255,250,225,.7)';ctx.beginPath();ctx.arc(C,C,497,Math.PI*1.1,Math.PI*1.7);ctx.stroke();
+  var lv=[],b,a,x,y;
+  for(b=0;b<BULBS;b++){
+    lv[b]=bulbLevel(b,now);a=b/BULBS*TAU-Math.PI/2;x=C+Math.cos(a)*475.5;y=C+Math.sin(a)*475.5;
+    ctx.beginPath();ctx.arc(x,y,11,0,TAU);ctx.fillStyle="#8f6214";ctx.fill();            // socket
+    var G=ctx.createRadialGradient(x-3,y-3,.5,x,y,9.5);
+    G.addColorStop(0,'#ffffff');G.addColorStop(.35,mix([255,214,110],[255,250,228],lv[b]));G.addColorStop(1,mix([110,78,18],[255,196,60],lv[b]));
+    ctx.beginPath();ctx.arc(x,y,9,0,TAU);ctx.fillStyle=G;ctx.fill();                      // glass
   }
+  // bloom: additive warm glow on top of everything around the ring
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(b=0;b<BULBS;b++){if(lv[b]<.35)continue;a=b/BULBS*TAU-Math.PI/2;x=C+Math.cos(a)*475.5;y=C+Math.sin(a)*475.5;
+    var r=18+26*lv[b],Gl=ctx.createRadialGradient(x,y,0,x,y,r);
+    Gl.addColorStop(0,'rgba(255,226,140,'+(.65*lv[b])+')');Gl.addColorStop(1,'rgba(255,190,60,0)');
+    ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fillStyle=Gl;ctx.fill()}
+  // twinkles on the gold bezel
+  if(!REDUCED&&Math.random()<.06&&sparks.length<4)sparks.push({a:Math.random()*TAU,r:Math.random()<.5?494:460,t0:now});
+  sparks=sparks.filter(function(p){var k=(now-p.t0)/700;if(k>1)return false;
+    var sx=C+Math.cos(p.a)*p.r,sy=C+Math.sin(p.a)*p.r,sz=11*Math.sin(k*Math.PI);
+    ctx.fillStyle='rgba(255,252,235,'+Math.sin(k*Math.PI)+')';ctx.beginPath();
+    ctx.moveTo(sx,sy-sz);ctx.quadraticCurveTo(sx,sy,sx+sz,sy);ctx.quadraticCurveTo(sx,sy,sx,sy+sz);ctx.quadraticCurveTo(sx,sy,sx-sz,sy);ctx.quadraticCurveTo(sx,sy,sx,sy-sz);ctx.fill();return true});
+  ctx.restore();
   ctx.save();ctx.translate(C,C);ctx.rotate(rot);ctx.drawImage(wheelImg,-C,-C);ctx.restore();
   // soft light from the top
   var L=ctx.createRadialGradient(C-120,C-200,20,C,C,470);
   L.addColorStop(0,'rgba(255,255,255,.22)');L.addColorStop(.45,'rgba(255,255,255,0)');L.addColorStop(1,'rgba(3,24,70,.22)');
   ctx.beginPath();ctx.arc(C,C,RS,0,TAU);ctx.fillStyle=L;ctx.fill();
   // hub carrying the draw number
-  ctx.beginPath();ctx.arc(C,C,112,0,TAU);ctx.fillStyle='#ffc928';ctx.fill();
+  ctx.beginPath();ctx.arc(C,C,112,0,TAU);ctx.fillStyle=GOLD;ctx.fill();
   ctx.beginPath();ctx.arc(C,C,100,0,TAU);ctx.fillStyle='#ffffff';ctx.fill();
   var H=ctx.createRadialGradient(C-26,C-30,6,C,C,96);H.addColorStop(0,'#2f86e0');H.addColorStop(1,'#08245a');
   ctx.beginPath();ctx.arc(C,C,94,0,TAU);ctx.fillStyle=H;ctx.fill();
@@ -303,14 +344,15 @@ function spin(){
   var tgt=((-Math.PI/2-(i+.5)*seg+jitter)%TAU+TAU)%TAU,cur=(rot%TAU+TAU)%TAU;
   var delta=(tgt-cur+TAU)%TAU+TAU*(REDUCED?1:6+Math.floor(Math.random()*3));
   var wind=REDUCED?0:Math.min(.35,seg*.6),windDur=REDUCED?0:420,dur=REDUCED?1400:6200;
-  var start=rot,t0=performance.now();lastTick=null;
+  var start=rot,t0=performance.now(),prev=rot;lastTick=null;lights='spin';
   (function step(t){
     var e=t-t0;
     if(e<windDur){rot=start-wind*Math.sin(e/windDur*Math.PI/2)}
     else{var k=Math.min(1,(e-windDur)/dur),ez=1-Math.pow(1-k,4);rot=start-wind+(delta+wind)*ez}
+    chasePos+=(rot-prev)*BULBS/TAU*1.6+.04;prev=rot; // lights race with the wheel, then slow with it
     var b=Math.floor(((-Math.PI/2-rot)%TAU+TAU)%TAU/seg);
-    if(lastTick!==null&&b!==lastTick){flick();chase=(chase+1)%3}lastTick=b;
-    draw();
+    if(lastTick!==null&&b!==lastTick)flick();lastTick=b;
+    draw(t);
     if(e<windDur+dur)requestAnimationFrame(step);else done(n[indexAt(rot,n.length)]);
   })(t0);
 }
@@ -320,6 +362,7 @@ function done(name){
   s=load();s.log.push(name);
   if(s.remove){var j=s.names.indexOf(name);if(j>=0)s.names.splice(j,1)}
   save(s);
+  lights='win';setTimeout(function(){lights='idle'},2600);
   var no=pad(s.log.length);
   $('badgeNo').textContent=no;$('winLead').textContent='Doorprize No. '+no+' · Selamat kepada';
   $('winName').textContent=name;$('winNote').hidden=s.mode!=='preset';
@@ -333,8 +376,8 @@ function closeReveal(){
   $('reveal').hidden=true;revealOpen=false;
   s=load();spinning=false;render();$('spin').focus();
 }
-// idle: rim lights chase slowly
-if(!REDUCED)setInterval(function(){if(!spinning){chase=(chase+1)%3;draw()}},650);
+// light show runs continuously while the wheel rests (the spin loop draws its own frames)
+if(!REDUCED)requestAnimationFrame(function loop(t){if(wheelImg&&(!spinning||revealOpen))draw(t);requestAnimationFrame(loop)});
 
 $('spin').addEventListener('click',spin);
 $('next').addEventListener('click',closeReveal);
