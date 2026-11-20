@@ -27,6 +27,9 @@ export function clean(x) {
   return o;
 }
 
+// What the wheel computer may see: everything except the preset winner queue.
+export function publicView(s) { return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], v: s.v }; }
+
 async function sameSecret(a, b) {
   const e = new TextEncoder();
   const [x, y] = await Promise.all([a, b].map((v) => crypto.subtle.digest("SHA-256", e.encode(v))));
@@ -76,9 +79,39 @@ export class Room extends DurableObject {
     return [200, s];
   }
 
+  // ---- wheel computer: no password, a long random key handed out as a link from the admin page ----
+  // The key only allows reading the public view and spinning; the preset queue never leaves the server.
+  async wheelKey(token, rotate) {
+    if (!(await this.ok(token))) return [401, { error: "Sesi habis. Masuk lagi." }];
+    let k = await this.ctx.storage.get("wkey");
+    if (!k || rotate) { k = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, ""); await this.ctx.storage.put("wkey", k); }
+    return [200, { key: k }];
+  }
+
+  async wheelOk(k) {
+    const stored = await this.ctx.storage.get("wkey");
+    return !!stored && typeof k === "string" && k.length === stored.length && (await sameSecret(k, stored));
+  }
+
+  async wheelState(k, v) {
+    if (!(await this.wheelOk(k))) return [401, { error: "Link roda tidak valid. Buka link roda dari halaman admin." }];
+    const s = await this.state();
+    return [200, v === s.v ? { same: true } : publicView(s)];
+  }
+
+  async wheelSpin(k) {
+    if (!(await this.wheelOk(k))) return [401, { error: "Link roda tidak valid. Buka link roda dari halaman admin." }];
+    const [st, r] = await this.draw();
+    return [st, st === 200 ? { name: r.name, before: r.before, state: publicView(r.state) } : r];
+  }
+
   // Draw, record and (optionally) remove the winner in one write.
   async spin(token) {
     if (!(await this.ok(token))) return [401, { error: "Sesi habis. Masuk lagi." }];
+    return this.draw();
+  }
+
+  async draw() {
     const s = await this.state();
     if (!s.names.length) return [409, { error: "Roda kosong." }];
     const before = s.names.slice(), q = s.winners.slice();
@@ -108,6 +141,10 @@ export default {
     if (p === "/api/state" && req.method === "GET") return json(await room.getState(token, Number(url.searchParams.get("v"))));
     if (p === "/api/state" && req.method === "PUT") return json(await room.update(token, body));
     if (p === "/api/spin" && req.method === "POST") return json(await room.spin(token));
+    if (p === "/api/wheelkey") return json(await room.wheelKey(token, req.method === "POST"));
+    const wk = req.headers.get("x-wheel-key") || "";
+    if (p === "/api/wheel/state" && req.method === "GET") return json(await room.wheelState(wk, Number(url.searchParams.get("v"))));
+    if (p === "/api/wheel/spin" && req.method === "POST") return json(await room.wheelSpin(wk));
     return json([404, { error: "Tidak ditemukan." }]);
   },
 };

@@ -145,7 +145,8 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
     <span class="chip" id="modeChip"></span>
     <span class="status" id="status" aria-live="polite"></span>
     <div class="row">
-      <a class="btn primary" href="./" target="_blank" rel="noopener"><svg class="i"><use href="#i-out"/></svg>Buka roda</a>
+      <a class="btn primary" id="openWheel" href="./" target="_blank" rel="noopener"><svg class="i"><use href="#i-out"/></svg>Buka roda</a>
+      <button class="btn" id="copyWheel" type="button" hidden>Salin link roda</button>
       <button class="btn" id="lockNow" type="button"><svg class="i"><use href="#i-lock"/></svg>Kunci</button>
     </div>
   </header>
@@ -185,6 +186,7 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
         <p class="sub" id="secSub">Password dan data hanya tersimpan di browser ini.</p>
         <div class="row">
           <button class="btn" id="changePw" type="button">Ganti password</button>
+          <button class="btn danger" id="rotateWheel" type="button" hidden>Ganti link roda</button>
           <button class="btn danger" id="reset" type="button">Reset peserta &amp; riwayat</button>
         </div>
       </section>
@@ -351,7 +353,22 @@ function poll(){
   api('state?v='+SRV.v).then(function(d){if(!d.same){SRV=d;if(!timer){S=clone(d);fill();stat('Diperbarui dari server')}}},function(){})
     .then(function(){setTimeout(poll,1500)});
 }
-function enterCloud(){api('state').then(function(d){SRV=d;S=clone(d);showApp();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
+function enterCloud(){api('state').then(function(d){SRV=d;S=clone(d);showApp();loadWheelKey(false);if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
+// the wheel computer opens without a password through this link (its key only allows viewing and spinning)
+var wheelLink='';
+function loadWheelKey(rotate){
+  api('wheelkey',{method:rotate?'POST':'GET'}).then(function(d){
+    wheelLink=location.origin+'/?k='+d.key;$('openWheel').href=wheelLink;$('copyWheel').hidden=false;$('rotateWheel').hidden=false;
+    if(rotate)stat('Link roda diganti. Buka link baru di komputer roda.');
+  },function(e){stat('Gagal memuat link roda: '+e.message)});
+}
+$('copyWheel').addEventListener('click',function(){
+  (navigator.clipboard?navigator.clipboard.writeText(wheelLink):Promise.reject()).then(function(){stat('Link roda disalin. Buka di komputer roda.')},
+    function(){prompt('Salin link roda ini:',wheelLink)});
+});
+$('rotateWheel').addEventListener('click',function(){
+  if(confirm('Ganti link roda? Komputer roda yang memakai link lama akan terputus dan harus dibuka ulang dengan link baru.'))loadWheelKey(true);
+});
 function authLost(){TOKEN=null;try{localStorage.removeItem(TKEY)}catch(e){}showLock()}
 
 (function(){var p='';for(var r=120,k=0;r<500;r+=26+k*3,k++)p+='M'+r+' 0A'+r+' '+r+' 0 1 0 '+(-r)+' 0A'+r+' '+r+' 0 1 0 '+r+' 0';$('rosPath').setAttribute('d',p)})(); // gong resonance rings

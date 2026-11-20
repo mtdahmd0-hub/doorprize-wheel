@@ -101,7 +101,7 @@ h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(3.4rem,6v
 .next:hover{background:var(--volt);border-color:var(--volt);color:var(--navy)}
 .gate{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:radial-gradient(circle at 50% 40%,rgba(26,99,199,.95),rgba(6,30,78,.98) 70%)}
 .gate[hidden]{display:none}
-.gate form{width:min(100%,420px);display:grid;gap:12px;background:var(--panel);border-radius:18px;padding:28px;box-shadow:0 24px 60px -20px rgba(4,24,70,.8)}
+.gate .gate-box{width:min(100%,420px);display:grid;gap:12px;background:var(--panel);border-radius:18px;padding:28px;box-shadow:0 24px 60px -20px rgba(4,24,70,.8)}
 .gate h2{margin:0;font-family:var(--display);font-weight:400;font-size:2.4rem;line-height:1;text-transform:uppercase}
 .gate-sub{margin:0;color:var(--soft);font-size:.9rem}
 .gate input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--rule);background:#061d47;color:#fff;font:600 1.05rem var(--ui)}
@@ -197,14 +197,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 </div>
 
 <div class="gate" id="gate" hidden>
-  <form id="gateForm" autocomplete="off">
+  <div class="gate-box">
     <p class="event">Customer Gathering</p>
-    <h2>Masuk ke roda</h2>
-    <p class="gate-sub">Mode dua komputer. Masukkan password panitia.</p>
-    <input type="password" id="gatePw" required aria-label="Password panitia" autocomplete="current-password">
-    <p class="gate-err" id="gateErr" role="alert"></p>
-    <button class="spin" type="submit">Masuk</button>
-  </form>
+    <h2>Roda belum terhubung</h2>
+    <p class="gate-sub">Di halaman admin, klik <b>Salin link roda</b>, lalu buka link itu di komputer ini. Cukup sekali, setelah itu alamat biasa langsung jalan.</p>
+  </div>
 </div>
 
 <script>
@@ -212,19 +209,20 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 var KEY='doorprize',TAU=2*Math.PI;
 var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[]};
 // Storage: this browser (GitHub Pages, one computer) or the sync server (Cloudflare, two computers).
-var CLOUD=false,S=null,TOKEN=null,TKEY='doorprize-token',polling=false;
-try{TOKEN=localStorage.getItem(TKEY)}catch(e){}
+var CLOUD=false,S=null,WKEY=null,KKEY='doorprize-wheelkey',polling=false;
+// wheel key arrives once as ?k=… from the admin's "Salin link roda"; keep it in this browser and hide it from the address bar
+(function(){var m=/[?&]k=([0-9a-f]{64})/.exec(location.search);
+  try{if(m){localStorage.setItem(KKEY,m[1]);history.replaceState(null,'',location.pathname)}WKEY=localStorage.getItem(KKEY)}catch(e){WKEY=m&&m[1]}})();
 function clone(o){return JSON.parse(JSON.stringify(o))}
 function load(){if(CLOUD)return clone(S);try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)))}catch(e){return Object.assign({},DEF)}}
 function save(s){
-  if(CLOUD){var d={};['names','mode','winners','remove','log'].forEach(function(k){if(JSON.stringify(s[k])!==JSON.stringify(S[k]))d[k]=s[k]});
-    S=clone(s);if(Object.keys(d).length)api('state',{method:'PUT',body:JSON.stringify(d)}).then(function(n){if(n.v>=S.v)S=n},function(){});return}
+  if(CLOUD){S=clone(s);return} // the wheel never writes in two-computer mode; the server records draws
   try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}
 }
 function api(path,opt){
-  opt=opt||{};opt.headers={'content-type':'application/json'};if(TOKEN)opt.headers.authorization='Bearer '+TOKEN;
+  opt=opt||{};opt.headers={'content-type':'application/json'};if(WKEY)opt.headers['x-wheel-key']=WKEY;
   return fetch('api/'+path,opt).then(function(r){return r.json().catch(function(){return {}}).then(function(d){
-    if(!r.ok){if(r.status===401&&path!=='login')authLost();throw new Error(d.error||('Gagal terhubung ('+r.status+')'))}return d})});
+    if(!r.ok){if(r.status===401)authLost();throw new Error(d.error||('Gagal terhubung ('+r.status+')'))}return d})});
 }
 function $(id){return document.getElementById(id)}
 
@@ -369,7 +367,7 @@ function spin(){
   if(spinning||!s.names.length)return;
   spinning=true;$('spin').disabled=true;
   if(CLOUD){ // the server draws, records and removes; we animate to its answer on the list it drew from
-    api('spin',{method:'POST'}).then(function(r){
+    api('wheel/spin',{method:'POST'}).then(function(r){
       S=r.state;
       if(JSON.stringify(r.before)!==JSON.stringify(s.names)){s.names=r.before;buildWheel()}
       turn(r.before.indexOf(r.name),r.before);
@@ -431,22 +429,16 @@ document.addEventListener('keydown',function(e){
 });
 addEventListener('storage',function(e){if(e.key===KEY&&!spinning&&!CLOUD){s=load();render()}});
 
-// two-computer mode: sign in once, then follow the server every 1.5 s
+// two-computer mode: no password; the wheel link's key lets this computer follow the server every 1.5 s
 function poll(){
-  if(!CLOUD||!TOKEN){polling=false;return}
-  api('state?v='+S.v).then(function(d){if(!d.same){S=d;if(!spinning){s=load();render()}}},function(){})
+  if(!CLOUD||!WKEY){polling=false;return}
+  api('wheel/state?v='+S.v).then(function(d){if(!d.same){S=d;if(!spinning){s=load();render()}}},function(){})
     .then(function(){setTimeout(poll,1500)});
 }
-function enterCloud(){api('state').then(function(d){S=d;$('gate').hidden=true;s=load();render();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
-function authLost(){TOKEN=null;try{localStorage.removeItem(TKEY)}catch(e){}$('gate').hidden=false;$('gatePw').focus()}
-$('gateForm').addEventListener('submit',function(e){
-  e.preventDefault();$('gateErr').textContent='';
-  api('login',{method:'POST',body:JSON.stringify({password:$('gatePw').value})}).then(function(d){
-    TOKEN=d.token;try{localStorage.setItem(TKEY,TOKEN)}catch(e){}$('gatePw').value='';enterCloud();
-  },function(err){$('gateErr').textContent=err.message});
-});
+function enterCloud(){api('wheel/state').then(function(d){S=d;$('gate').hidden=true;s=load();render();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
+function authLost(){WKEY=null;try{localStorage.removeItem(KKEY)}catch(e){}$('gate').hidden=false}
 fetch('api/ping').then(function(r){return r.ok?r.json():null}).then(function(d){
-  if(d&&d.cloud){CLOUD=true;TOKEN?enterCloud():authLost()}
+  if(d&&d.cloud){CLOUD=true;WKEY?enterCloud():authLost()}
 }).catch(function(){});
 
 render();
