@@ -210,7 +210,7 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
 var KEY='doorprize',AUTH='doorprize-auth',SESS='doorprize-unlocked',TAU=2*Math.PI;
 var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[]};
 // Storage: this browser (GitHub Pages, one computer) or the sync server (Cloudflare, two computers).
-var CLOUD=false,S=null,SRV=null,TOKEN=null,TKEY='doorprize-token',timer=null,polling=false;
+var SETUP=false,CLOUD=false,S=null,SRV=null,TOKEN=null,TKEY='doorprize-token',timer=null,polling=false;
 var FIELDS=['names','mode','winners','remove','log'];
 try{TOKEN=localStorage.getItem(TKEY)}catch(e){}
 function clone(o){return JSON.parse(JSON.stringify(o))}
@@ -257,9 +257,9 @@ function setUnlocked(v){try{v?sessionStorage.setItem(SESS,'1'):sessionStorage.re
 function showLock(){
   if(CLOUD){
     $('app').hidden=true;$('lock').hidden=false;
-    $('lockLede').textContent='Mode dua komputer. Masukkan password panitia.';
-    $('pw2Box').hidden=true;$('pw2').required=false;$('forgot').hidden=true;
-    $('lockBtn').textContent='Masuk';$('lockErr').textContent='';$('pw1').value='';$('pw1').focus();return;
+    $('lockLede').textContent=SETUP?'Buat password admin untuk acara ini (minimal 6 karakter). Password ini dipakai di semua komputer admin.':'Mode dua komputer. Masukkan password panitia.';
+    $('pw2Box').hidden=!SETUP;$('pw2').required=SETUP;$('forgot').hidden=true;
+    $('lockBtn').textContent=SETUP?'Buat password & masuk':'Masuk';$('lockErr').textContent='';$('pw1').value=$('pw2').value='';$('pw1').focus();return;
   }
   var first=!getAuth();
   $('app').hidden=true;$('lock').hidden=false;
@@ -274,10 +274,16 @@ function showApp(){$('lock').hidden=true;$('app').hidden=false;fill()}
 $('lockForm').addEventListener('submit',function(e){
   e.preventDefault();var pw=$('pw1').value,first=!getAuth();
   if(CLOUD){
+    if(SETUP&&pw.length<6){$('lockErr').textContent='Password minimal 6 karakter.';return}
+    if(SETUP&&$('pw2').value!==pw){$('lockErr').textContent='Kedua password tidak sama.';return}
     $('lockBtn').disabled=true;$('lockErr').textContent='';
-    api('login',{method:'POST',body:JSON.stringify({password:pw})}).then(function(d){
-      TOKEN=d.token;try{localStorage.setItem(TKEY,TOKEN)}catch(e){}enterCloud();
-    },function(err){$('lockErr').textContent=err.message;$('pw1').select()}).then(function(){$('lockBtn').disabled=false});
+    api(SETUP?'setup':'login',{method:'POST',body:JSON.stringify({password:pw})}).then(function(d){
+      TOKEN=d.token;SETUP=false;try{localStorage.setItem(TKEY,TOKEN)}catch(e){}enterCloud();
+    },function(err){
+      if(/belum dibuat/.test(err.message)){SETUP=true;showLock();return}
+      if(/sudah dibuat/.test(err.message)){SETUP=false;showLock()}
+      $('lockErr').textContent=err.message;$('pw1').select();
+    }).then(function(){$('lockBtn').disabled=false});
     return;
   }
   if(!window.crypto||!crypto.subtle){$('lockErr').textContent='Browser ini tidak mendukung enkripsi. Buka lewat https.';return}
@@ -374,9 +380,9 @@ function authLost(){TOKEN=null;try{localStorage.removeItem(TKEY)}catch(e){}showL
 (function(){var p='';for(var r=120,k=0;r<500;r+=26+k*3,k++)p+='M'+r+' 0A'+r+' '+r+' 0 1 0 '+(-r)+' 0A'+r+' '+r+' 0 1 0 '+r+' 0';$('rosPath').setAttribute('d',p)})(); // gong resonance rings
 fetch('api/ping').then(function(r){return r.ok?r.json():null},function(){return null}).then(function(d){
   if(d&&d.cloud){
-    CLOUD=true;$('changePw').hidden=true;
+    CLOUD=true;SETUP=!!d.setup;$('changePw').hidden=true;
     $('secSub').textContent='Mode dua komputer: data tersimpan di server dan tersinkron ke komputer roda. Password diatur di server.';
-    TOKEN?enterCloud():showLock();
+    TOKEN&&!SETUP?enterCloud():showLock();
   }else unlocked()&&getAuth()?showApp():showLock();
 });
 })();

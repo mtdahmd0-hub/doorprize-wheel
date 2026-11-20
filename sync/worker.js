@@ -30,6 +30,12 @@ export function clean(x) {
 // What the wheel computer may see: everything except the preset winner queue.
 export function publicView(s) { return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], v: s.v }; }
 
+async function pbkdf2(password, salt) {
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations: 100000 }, k, 256); // Workers cap: 100k
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function sameSecret(a, b) {
   const e = new TextEncoder();
   const [x, y] = await Promise.all([a, b].map((v) => crypto.subtle.digest("SHA-256", e.encode(v))));
@@ -39,21 +45,44 @@ async function sameSecret(a, b) {
 export class Room extends DurableObject {
   async state() { return Object.assign({}, DEF, { v: 0 }, await this.ctx.storage.get("s")); }
 
+  // Admin password: the ADMIN_PASSWORD secret if one is set; otherwise the panitia create it on the
+  // first visit to /admin and only a PBKDF2 hash is stored here.
+  // ponytail: first visitor claims it; create it right after deploy. Reset by setting the secret.
+  async needsSetup() { return !this.env.ADMIN_PASSWORD && !(await this.ctx.storage.get("pw")); }
+
+  async setup(password) {
+    if (!(await this.needsSetup())) return [409, { error: "Password admin sudah dibuat." }];
+    if (typeof password !== "string" || password.length < 6 || password.length > 200) return [400, { error: "Password minimal 6 karakter." }];
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    await this.ctx.storage.put("pw", { salt: [...salt], hash: await pbkdf2(password, salt) });
+    return this.session();
+  }
+
+  async checkPassword(password) {
+    if (this.env.ADMIN_PASSWORD) return sameSecret(password, this.env.ADMIN_PASSWORD);
+    const pw = await this.ctx.storage.get("pw");
+    return !!pw && (await sameSecret(await pbkdf2(password, new Uint8Array(pw.salt)), pw.hash));
+  }
+
   async login(password) {
-    if (!this.env.ADMIN_PASSWORD) return [500, { error: "ADMIN_PASSWORD belum diatur di server." }];
+    if (await this.needsSetup()) return [428, { setup: true, error: "Password admin belum dibuat." }];
     const now = Date.now();
     let f = (await this.ctx.storage.get("fail")) || { n: 0, t: 0 };
     if (f.n >= 5 && now - f.t < 60e3) return [429, { error: "Terlalu banyak percobaan. Tunggu 1 menit." }];
-    if (typeof password !== "string" || !(await sameSecret(password, this.env.ADMIN_PASSWORD))) {
+    if (typeof password !== "string" || !(await this.checkPassword(password))) {
       f = { n: (now - f.t < 60e3 ? f.n : 0) + 1, t: now };
       await this.ctx.storage.put("fail", f);
       return [401, { error: "Password salah." }];
     }
-    const sess = (await this.ctx.storage.get("sess")) || {};
+    this.ctx.storage.delete("fail");
+    return this.session();
+  }
+
+  async session() {
+    const now = Date.now(), sess = (await this.ctx.storage.get("sess")) || {};
     for (const k in sess) if (sess[k] < now) delete sess[k];
     const token = crypto.randomUUID();
     sess[token] = now + SESSION_MS;
-    this.ctx.storage.delete("fail");
     await this.ctx.storage.put("sess", sess);
     return [200, { token }];
   }
@@ -133,11 +162,12 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url), p = url.pathname;
     if (!p.startsWith("/api/")) return env.ASSETS.fetch(req);
-    if (p === "/api/ping") return json([200, { cloud: true }]);
     const room = env.ROOM.getByName("event");
+    if (p === "/api/ping") return json([200, { cloud: true, setup: await room.needsSetup() }]);
     const token = (req.headers.get("authorization") || "").replace(/^Bearer /, "");
     const body = req.method === "GET" ? null : await req.json().catch(() => ({}));
     if (p === "/api/login" && req.method === "POST") return json(await room.login(body.password));
+    if (p === "/api/setup" && req.method === "POST") return json(await room.setup(body.password));
     if (p === "/api/state" && req.method === "GET") return json(await room.getState(token, Number(url.searchParams.get("v"))));
     if (p === "/api/state" && req.method === "PUT") return json(await room.update(token, body));
     if (p === "/api/spin" && req.method === "POST") return json(await room.spin(token));

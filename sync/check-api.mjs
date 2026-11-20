@@ -10,8 +10,15 @@ const call = async (path, opt = {}, token) => {
   return [r.status, await r.json()];
 };
 
-assert.deepEqual((await call("ping"))[1], { cloud: true });
+const [, ping] = await call("ping");
+assert.equal(ping.cloud, true);
 assert.equal((await call("state"))[0], 401, "state needs a session");
+if (ping.setup) { // no ADMIN_PASSWORD secret: first visit creates the password
+  assert.equal((await call("login", { method: "POST", body: JSON.stringify({ password: PW }) }))[0], 428, "login asks for setup");
+  assert.equal((await call("setup", { method: "POST", body: JSON.stringify({ password: "123" }) }))[0], 400, "short password rejected");
+  assert.equal((await call("setup", { method: "POST", body: JSON.stringify({ password: PW }) }))[0], 200);
+}
+assert.equal((await call("setup", { method: "POST", body: JSON.stringify({ password: "orang-lain" }) }))[0], 409, "password cannot be re-claimed");
 assert.equal((await call("login", { method: "POST", body: JSON.stringify({ password: "salah" }) }))[0], 401);
 const [st, { token }] = await call("login", { method: "POST", body: JSON.stringify({ password: PW }) });
 assert.equal(st, 200);
