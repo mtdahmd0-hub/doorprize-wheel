@@ -37,22 +37,14 @@ assert.deepEqual(sp.state.winners, [], "queue consumed");
 assert.deepEqual((await call("state?v=" + sp.state.v, {}, token))[1], { same: true }, "poll short-circuits");
 const [, sp2] = await call("spin", { method: "POST" }, token);
 assert.ok(["Ani", "Cici"].includes(sp2.name), "empty queue falls back to random");
-// wheel computer: no password, link key only
-const wcall = (path, opt, key) => fetch(BASE + "/api/" + path, { ...opt, headers: { "content-type": "application/json", "x-wheel-key": key || "" } })
-  .then(async (r) => [r.status, await r.json()]);
-assert.equal((await call("wheelkey"))[0], 401, "wheel key needs admin session");
-const [, { key }] = await call("wheelkey", {}, token);
-assert.match(key, /^[0-9a-f]{64}$/);
-assert.equal((await wcall("wheel/state", {}, "nope"))[0], 401, "wrong key rejected");
+// wheel page: open, no password; queue hidden; spins spaced out
 await call("state", { method: "PUT", body: JSON.stringify({ names: ["Ani", "Budi"], mode: "preset", winners: ["Ani"], log: [] }) }, token);
-const [, ws] = await wcall("wheel/state", {}, key);
+const [wst, ws] = await call("wheel/state");
+assert.equal(wst, 200, "wheel state needs no password");
 assert.deepEqual(ws.winners, [], "preset queue hidden from the wheel");
 assert.deepEqual(ws.names, ["Ani", "Budi"]);
-const [, wsp] = await wcall("wheel/spin", { method: "POST" }, key);
+const [, wsp] = await call("wheel/spin", { method: "POST" });
 assert.equal(wsp.name, "Ani", "wheel spin follows the queue");
 assert.deepEqual(wsp.state.winners, []);
-const [, { key: key2 }] = await call("wheelkey", { method: "POST" }, token);
-assert.notEqual(key2, key);
-assert.equal((await wcall("wheel/state", {}, key))[0], 401, "rotated key invalidates the old link");
-assert.equal((await wcall("wheel/state", {}, key2))[0], 200);
+assert.equal((await call("wheel/spin", { method: "POST" }))[0], 429, "back-to-back spin blocked");
 console.log("check-api: all assertions passed");

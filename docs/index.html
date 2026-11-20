@@ -65,6 +65,8 @@ h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(3.4rem,6v
 .spin:focus-visible{outline:3px solid var(--white);outline-offset:4px}
 .spin:disabled{opacity:.5;cursor:default;transform:none;filter:none}
 .hint{margin:-8px 0 0;text-align:center;color:var(--soft);font-size:.82rem}
+.sound{appearance:none;cursor:pointer;background:none;border:1px solid var(--rule);border-radius:6px;padding:1px 8px;color:var(--soft);font:700 .72rem var(--ui)}
+.sound[aria-pressed="false"]{opacity:.6;text-decoration:line-through}
 .hint kbd{font-family:var(--ui);font-weight:700;font-size:.72rem;border:1px solid var(--rule);border-radius:6px;padding:1px 7px;color:var(--white)}
 .ledger h2{margin:0 0 6px;font-size:.78rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
 .ledger ol{list-style:none;margin:0;padding:0;max-height:min(24vh,220px);overflow:auto}
@@ -164,7 +166,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <div class="serial"><small>Undian ke</small><b id="serial">No. 001</b></div>
     <p id="mode" class="mode" aria-live="polite"></p>
     <button id="spin" class="spin">Putar roda</button>
-    <p class="hint">atau tekan <kbd>Spasi</kbd></p>
+    <p class="hint">atau tekan <kbd>Spasi</kbd> · <button class="sound" id="sound" type="button" aria-pressed="true">Suara: nyala</button></p>
     <div class="ledger"><h2>Pemenang</h2><ol id="log"></ol></div>
     <p class="count" id="count"></p>
     <p class="place">Bogor, November 2026</p>
@@ -337,7 +339,7 @@ function spin(){
   if(spinning)return;
   s=load();var n=s.names.slice();
   if(!n.length)return;
-  spinning=true;$('spin').disabled=true;
+  spinning=true;$('spin').disabled=true;audio(); // first press unlocks audio
   var q=s.winners.slice(),i=pick(n,s.mode,q,Math.random);
   s.winners=q;save(s); // consume the queue now, so admin sees it
   var seg=TAU/n.length,jitter=(Math.random()-.5)*seg*.7;
@@ -351,7 +353,7 @@ function spin(){
     else{var k=Math.min(1,(e-windDur)/dur),ez=1-Math.pow(1-k,4);rot=start-wind+(delta+wind)*ez}
     chasePos+=(rot-prev)*BULBS/TAU*1.6+.04;prev=rot; // lights race with the wheel, then slow with it
     var b=Math.floor(((-Math.PI/2-rot)%TAU+TAU)%TAU/seg);
-    if(lastTick!==null&&b!==lastTick)flick();lastTick=b;
+    if(lastTick!==null&&b!==lastTick){flick();tickSound()}lastTick=b;
     draw(t);
     if(e<windDur+dur)requestAnimationFrame(step);else done(n[indexAt(rot,n.length)]);
   })(t0);
@@ -362,7 +364,7 @@ function done(name){
   s=load();s.log.push(name);
   if(s.remove){var j=s.names.indexOf(name);if(j>=0)s.names.splice(j,1)}
   save(s);
-  lights='win';setTimeout(function(){lights='idle'},2600);
+  winSound();lights='win';setTimeout(function(){lights='idle'},2600);
   var no=pad(s.log.length);
   $('badgeNo').textContent=no;$('winLead').textContent='Doorprize No. '+no+' · Selamat kepada';
   $('winName').textContent=name;$('winNote').hidden=s.mode!=='preset';
@@ -388,6 +390,36 @@ document.addEventListener('keydown',function(e){
   }
 });
 addEventListener('storage',function(e){if(e.key===KEY&&!spinning){s=load();render()}});
+
+// ---- sound: synthesized in the browser (no audio files). A click per segment passing the pin, a short fanfare on the win.
+var AC=null,SOUND=true;
+try{SOUND=localStorage.getItem('doorprize-sound')!=='off'}catch(e){}
+function audio(){
+  if(!SOUND)return null;
+  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()}catch(e){AC=null}
+  return AC;
+}
+function tickSound(){
+  var a=audio();if(!a)return;
+  var t=a.currentTime,o=a.createOscillator(),f=a.createBiquadFilter(),g=a.createGain();
+  o.type='square';o.frequency.setValueAtTime(1500+Math.random()*250,t);o.frequency.exponentialRampToValueAtTime(420,t+.035);
+  f.type='bandpass';f.frequency.value=1900;f.Q.value=1.1;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.32,t+.003);g.gain.exponentialRampToValueAtTime(.0001,t+.05);
+  o.connect(f);f.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.06);
+}
+function winSound(){
+  var a=audio();if(!a)return;
+  var t=a.currentTime;
+  [523.25,659.25,783.99,1046.5,1318.5].forEach(function(fr,i){
+    var o=a.createOscillator(),g=a.createGain(),st=t+i*.1,len=i===4?1.4:.4;
+    o.type='triangle';o.frequency.value=fr;
+    g.gain.setValueAtTime(.0001,st);g.gain.exponentialRampToValueAtTime(.2,st+.02);g.gain.exponentialRampToValueAtTime(.0001,st+len);
+    o.connect(g);g.connect(a.destination);o.start(st);o.stop(st+len+.05);
+  });
+}
+function soundLabel(){var b=$('sound');b.textContent=SOUND?'Suara: nyala':'Suara: mati';b.setAttribute('aria-pressed',String(SOUND))}
+$('sound').addEventListener('click',function(){SOUND=!SOUND;try{localStorage.setItem('doorprize-sound',SOUND?'on':'off')}catch(e){}soundLabel();if(SOUND)tickSound()});
+soundLabel();
 
 render();
 // canvas text needs the web fonts; redraw once they are in

@@ -5,6 +5,7 @@ import { DurableObject } from "cloudflare:workers";
 
 const DEF = { names: ["A", "B", "C", "D", "E"], mode: "random", winners: [], remove: true, log: [] };
 const SESSION_MS = 12 * 3600e3;
+const SPIN_GAP_MS = 8000; // longer than one spin animation
 
 // Preset mode: next queued winner still on the wheel; otherwise random. (Same rule as the pages.)
 export function pick(names, mode, queue, rand) {
@@ -108,30 +109,21 @@ export class Room extends DurableObject {
     return [200, s];
   }
 
-  // ---- wheel computer: no password, a long random key handed out as a link from the admin page ----
-  // The key only allows reading the public view and spinning; the preset queue never leaves the server.
-  async wheelKey(token, rotate) {
-    if (!(await this.ok(token))) return [401, { error: "Sesi habis. Masuk lagi." }];
-    let k = await this.ctx.storage.get("wkey");
-    if (!k || rotate) { k = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, ""); await this.ctx.storage.put("wkey", k); }
-    return [200, { key: k }];
-  }
-
-  async wheelOk(k) {
-    const stored = await this.ctx.storage.get("wkey");
-    return !!stored && typeof k === "string" && k.length === stored.length && (await sameSecret(k, stored));
-  }
-
-  async wheelState(k, v) {
-    if (!(await this.wheelOk(k))) return [401, { error: "Link roda tidak valid. Buka link roda dari halaman admin." }];
+  // ---- wheel page: open, no password (panitia's choice). It sees the public view only, so the
+  // preset queue never leaves the server, and spins are spaced out so the button can't be hammered.
+  // ponytail: anyone with the URL can spin; upgrade path is the earlier link-key gate if that becomes a problem.
+  async wheelState(v) {
     const s = await this.state();
     return [200, v === s.v ? { same: true } : publicView(s)];
   }
 
-  async wheelSpin(k) {
-    if (!(await this.wheelOk(k))) return [401, { error: "Link roda tidak valid. Buka link roda dari halaman admin." }];
+  async wheelSpin() {
+    const now = Date.now(), last = (await this.ctx.storage.get("lastSpin")) || 0;
+    if (now - last < SPIN_GAP_MS) return [429, { error: "Tunggu sebentar, roda baru saja diputar." }];
     const [st, r] = await this.draw();
-    return [st, st === 200 ? { name: r.name, before: r.before, state: publicView(r.state) } : r];
+    if (st !== 200) return [st, r];
+    await this.ctx.storage.put("lastSpin", now);
+    return [200, { name: r.name, before: r.before, state: publicView(r.state) }];
   }
 
   // Draw, record and (optionally) remove the winner in one write.
@@ -171,10 +163,8 @@ export default {
     if (p === "/api/state" && req.method === "GET") return json(await room.getState(token, Number(url.searchParams.get("v"))));
     if (p === "/api/state" && req.method === "PUT") return json(await room.update(token, body));
     if (p === "/api/spin" && req.method === "POST") return json(await room.spin(token));
-    if (p === "/api/wheelkey") return json(await room.wheelKey(token, req.method === "POST"));
-    const wk = req.headers.get("x-wheel-key") || "";
-    if (p === "/api/wheel/state" && req.method === "GET") return json(await room.wheelState(wk, Number(url.searchParams.get("v"))));
-    if (p === "/api/wheel/spin" && req.method === "POST") return json(await room.wheelSpin(wk));
+    if (p === "/api/wheel/state" && req.method === "GET") return json(await room.wheelState(Number(url.searchParams.get("v"))));
+    if (p === "/api/wheel/spin" && req.method === "POST") return json(await room.wheelSpin());
     return json([404, { error: "Tidak ditemukan." }]);
   },
 };
