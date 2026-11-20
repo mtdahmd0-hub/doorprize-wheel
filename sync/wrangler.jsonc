@@ -1,0 +1,10 @@
+{
+  // Two-computer version: serves public/ and the sync API from one Worker.
+  "name": "doorprize-sync",
+  "main": "worker.js",
+  "compatibility_date": "2025-10-01",
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  "durable_objects": { "bindings": [{ "name": "ROOM", "class_name": "Room" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }]
+  // Admin password is a secret, never in this file:  npx wrangler secret put ADMIN_PASSWORD
+}
