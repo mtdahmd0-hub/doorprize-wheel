@@ -257,7 +257,7 @@ function pickBatch(names,mode,queue,count,rand){
   for(var k=0;k<n;k++)out.push(pool.splice(pick(pool,mode,queue,rand),1)[0]);
   return out;
 }
-function tone(i,n){var t=i%TONES.length;if(i===n-1&&i>0&&t===0)t=2;return TONES[t]}
+function sliceTone(i,n){var t=i%TONES.length;if(i===n-1&&i>0&&t===0)t=2;return TONES[t]}
 
 function buildWheel(list){
   var n=list||s.names,o=document.createElement('canvas');o.width=o.height=W;
@@ -269,7 +269,7 @@ function buildWheel(list){
   }
   var seg=TAU/n.length;
   for(i=0;i<n.length;i++){
-    g.beginPath();g.moveTo(0,0);g.arc(0,0,RS,i*seg,(i+1)*seg);g.closePath();g.fillStyle=tone(i,n.length)[0];g.fill();
+    g.beginPath();g.moveTo(0,0);g.arc(0,0,RS,i*seg,(i+1)*seg);g.closePath();g.fillStyle=sliceTone(i,n.length)[0];g.fill();
   }
   // flowing energy lines, like the backdrop's sweep
   g.save();g.beginPath();g.arc(0,0,RS,0,TAU);g.clip();
@@ -280,7 +280,7 @@ function buildWheel(list){
   }
   g.restore();
   for(i=0;i<n.length;i++){
-    var tc=tone(i,n.length);
+    var tc=sliceTone(i,n.length);
     g.save();g.rotate(i*seg);
     g.strokeStyle='#ffffff';g.lineWidth=3;g.beginPath();g.moveTo(108,0);g.lineTo(RS,0);g.stroke();
     g.rotate(seg/2);
