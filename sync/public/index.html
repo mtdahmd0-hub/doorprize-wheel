@@ -418,10 +418,10 @@ addEventListener('storage',function(e){if(e.key===KEY&&!spinning&&!CLOUD){s=load
 // two-computer mode: no password; follow the server every 1.5 s
 function poll(){
   if(!CLOUD){polling=false;return}
-  api('wheel/state?v='+S.v).then(function(d){if(!d.same){S=d;if(!spinning){s=load();render()}}},function(){})
+  api('wheel/state?v='+S.v).then(function(d){if(!d.same){if(!Array.isArray(d.prizes))d.prizes=PRIZES.slice();S=d;if(!spinning){s=load();render()}}},function(){})
     .then(function(){setTimeout(poll,1500)});
 }
-function enterCloud(){api('wheel/state').then(function(d){S=d;s=load();render();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
+function enterCloud(){api('wheel/state').then(function(d){if(!Array.isArray(d.prizes))d.prizes=PRIZES.slice();S=d;s=load();render();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
 fetch('api/ping').then(function(r){return r.ok?r.json():null}).then(function(d){
   if(d&&d.cloud){CLOUD=true;enterCloud()}
 }).catch(function(){});

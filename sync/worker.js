@@ -46,7 +46,9 @@ export function clean(x) {
 }
 
 // What the wheel computer may see: everything except the preset winner queue.
-export function publicView(s) { return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], prizes: s.prizes, v: s.v }; }
+export function publicView(s) {
+  return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], prizes: Array.isArray(s.prizes) ? s.prizes : DEFAULT_PRIZES, v: s.v };
+}
 
 async function pbkdf2(password, salt) {
   const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -61,7 +63,11 @@ async function sameSecret(a, b) {
 }
 
 export class Room extends DurableObject {
-  async state() { return Object.assign({}, DEF, { v: 0 }, await this.ctx.storage.get("s")); }
+  async state() {
+    const s = Object.assign({}, DEF, { v: 0 }, await this.ctx.storage.get("s"));
+    if (!Array.isArray(s.prizes)) s.prizes = DEFAULT_PRIZES.slice();
+    return s;
+  }
 
   // Admin password: the ADMIN_PASSWORD secret if one is set; otherwise the panitia create it on the
   // first visit to /admin and only a PBKDF2 hash is stored here.

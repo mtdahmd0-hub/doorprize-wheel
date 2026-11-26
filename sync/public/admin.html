@@ -384,10 +384,10 @@ addEventListener('storage',function(e){if(e.key===KEY&&!$('app').hidden&&!CLOUD)
 // two-computer mode: follow the server every 1.5 s (draws made on the wheel computer appear here)
 function poll(){
   if(!CLOUD||!TOKEN){polling=false;return}
-  api('state?v='+SRV.v).then(function(d){if(!d.same){SRV=d;if(!timer){S=clone(d);fill();stat('Diperbarui dari server')}}},function(){})
+  api('state?v='+SRV.v).then(function(d){if(!d.same){SRV=d;if(!timer){S=clone(d);if(!Array.isArray(S.prizes))S.prizes=PRIZES.slice();fill();stat('Diperbarui dari server')}}},function(){})
     .then(function(){setTimeout(poll,1500)});
 }
-function enterCloud(){api('state').then(function(d){SRV=d;S=clone(d);showApp();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
+function enterCloud(){api('state').then(function(d){SRV=d;S=clone(d);if(!Array.isArray(S.prizes))S.prizes=PRIZES.slice();showApp();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
 function authLost(){TOKEN=null;try{localStorage.removeItem(TKEY)}catch(e){}showLock()}
 
 (function(){var p='';for(var r=120,k=0;r<500;r+=26+k*3,k++)p+='M'+r+' 0A'+r+' '+r+' 0 1 0 '+(-r)+' 0A'+r+' '+r+' 0 1 0 '+r+' 0';$('rosPath').setAttribute('d',p)})(); // gong resonance rings
