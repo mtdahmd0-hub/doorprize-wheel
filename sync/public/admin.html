@@ -238,21 +238,29 @@ var KEY='doorprize',AUTH='doorprize-auth',SESS='doorprize-unlocked',TAU=2*Math.P
 var PRIZES=[['Kursi lipat Montec (Azko)',15],['Voucher Belanja Eiger 200k',10],['Kipas angin portabel (Azko)',10],['Picas texas botol vacuum flask (Azko)',10],['Kompor Culinart (Azko)',5],['Soleil Sleeping Bag 250 (Azko)',5],['Blender',3],['Sleeplite kasur lipat (Azko)',5],['Oven',5],['Kris Air Fryer (Azko)',3],['Xiaomi Strika uap',3],['Grandprize 3 (Emasku 0.5 gr)',1],['Grand prize 2 (Emasku 1 gr)',1],['Grandprize 1 (Emasku 2gr)',1]].reduce(function(a,x){for(var k=0;k<x[1];k++)a.push(x[0]);return a},[]);
 var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],custom:[],remove:true,log:[],prizes:PRIZES,anim:'wheel'};
 // Storage: this browser (GitHub Pages, one computer) or the sync server (Cloudflare, two computers).
-var SETUP=false,CLOUD=false,S=null,SRV=null,TOKEN=null,TKEY='doorprize-token',timer=null,polling=false;
+var SETUP=false,CLOUD=false,S=null,SRV=null,TOKEN=null,TKEY='doorprize-token',timer=null,inFlight=0,polling=false;
 var FIELDS=['names','mode','winners','custom','remove','log','prizes','anim'];
 try{TOKEN=localStorage.getItem(TKEY)}catch(e){}
 function clone(o){return JSON.parse(JSON.stringify(o))}
 function load(){if(CLOUD)return clone(S);try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)))}catch(e){return Object.assign({},DEF)}}
-function save(s){
-  if(CLOUD){S=clone(s);clearTimeout(timer);stat('Menyimpan…');timer=setTimeout(flush,350);return} // debounce typing
+function save(s,immediate){
+  if(CLOUD){S=clone(s);clearTimeout(timer);stat('Menyimpan…');timer=setTimeout(flush,immediate?0:350);return} // debounce typing
   try{localStorage.setItem(KEY,JSON.stringify(s));stat('Tersimpan')}catch(e){stat('Gagal menyimpan: penyimpanan browser diblokir')}
 }
 function flush(){ // send only the fields that differ from the server, so we never overwrite the wheel's draws
-  timer=null;var d={};
+  timer=null;
+  if(inFlight){timer=setTimeout(flush,80);return Promise.resolve()}
+  var d={};
   FIELDS.forEach(function(k){if(JSON.stringify(S[k])!==JSON.stringify(SRV[k]))d[k]=S[k]});
   if(!Object.keys(d).length){stat('Tersimpan');return Promise.resolve()}
-  return api('state',{method:'PUT',body:JSON.stringify(d)}).then(function(n){SRV=n;if(!timer){S=clone(n);view(S)}stat('Tersimpan')},
-    function(e){stat('Gagal menyimpan: '+e.message);throw e});
+  inFlight++;
+  return api('state',{method:'PUT',body:JSON.stringify(d)}).then(function(n){
+    inFlight--;
+    if(!Array.isArray(n.prizes))n.prizes=PRIZES.slice();
+    SRV=n;
+    if(!timer&&!inFlight){S=clone(n);fill()}
+    stat('Tersimpan');
+  },function(e){inFlight--;stat('Gagal menyimpan: '+e.message);throw e});
 }
 function api(path,opt){
   opt=opt||{};opt.headers={'content-type':'application/json'};if(TOKEN)opt.headers.authorization='Bearer '+TOKEN;
@@ -396,28 +404,29 @@ function view(s){
   var cv=checkQueue(low,s.custom,$('ccheck'));
   $('customNote').textContent=cv?'Tersimpan '+cv+' nama valid di roda — akan diundi secara acak khusus untuk '+cv+' hadiah terakhir.':'Misal ada 9 nama di sini, maka ke-9 nama tersebut disimpan untuk diundi secara acak pada 9 hadiah terakhir.';
 }
-function commit(){
+function commit(immediate){
   var s=load();
   s.names=lines($('names'));s.winners=lines($('winners'));s.custom=lines($('custom'));s.prizes=parsePrizes($('prizes'));
   s.mode=document.querySelector('input[name=mode]:checked').value;
   s.anim=document.querySelector('input[name=anim]:checked').value;
   s.remove=$('remove').checked;
-  save(s);view(s);
+  save(s,immediate);view(s);
 }
-['names','winners','custom','prizes'].forEach(function(id){$(id).addEventListener('input',commit)});
-$('defPrizes').addEventListener('click',function(){var s=load();s.prizes=PRIZES.slice();save(s);fill()});
-document.querySelectorAll('input[name=mode],input[name=anim]').forEach(function(r){r.addEventListener('change',commit)});
-$('remove').addEventListener('change',commit);
-$('clearLog').addEventListener('click',function(){if(confirm('Hapus riwayat pemenang? Nomor undian kembali ke 001.')){var s=load();s.log=[];save(s);fill()}});
+['names','winners','custom','prizes'].forEach(function(id){$(id).addEventListener('input',function(){commit(false)})});
+$('defPrizes').addEventListener('click',function(){var s=load();s.prizes=PRIZES.slice();save(s,true);fill()});
+document.querySelectorAll('input[name=mode],input[name=anim]').forEach(function(r){r.addEventListener('change',function(){commit(true)})});
+$('remove').addEventListener('change',function(){commit(true)});
+$('clearLog').addEventListener('click',function(){if(confirm('Hapus riwayat pemenang? Nomor undian kembali ke 001.')){var s=load();s.log=[];save(s,true);fill()}});
 $('reset').addEventListener('click',function(){if(confirm('Reset peserta, antrean, dan riwayat ke awal? Password tetap.')){
-  if(CLOUD){save(Object.assign(clone(S),clone(DEF)))}else{try{localStorage.removeItem(KEY)}catch(e){}}fill();stat('Direset')}});
+  if(CLOUD){save(Object.assign(clone(S),clone(DEF)),true)}else{try{localStorage.removeItem(KEY)}catch(e){}}fill();stat('Direset')}});
 addEventListener('storage',function(e){if(e.key===KEY&&!$('app').hidden&&!CLOUD){fill();stat('Diperbarui dari roda')}});
 
 // two-computer mode: follow the server every 1.5 s (draws made on the wheel computer appear here)
 function poll(){
   if(!CLOUD||!TOKEN){polling=false;return}
-  api('state?v='+SRV.v).then(function(d){if(!d.same){SRV=d;if(!timer){S=clone(d);if(!Array.isArray(S.prizes))S.prizes=PRIZES.slice();fill();stat('Diperbarui dari server')}}},function(){})
-    .then(function(){setTimeout(poll,1500)});
+  api('state?v='+SRV.v).then(function(d){
+    if(!d.same&&!timer&&!inFlight&&d.v>SRV.v){SRV=d;S=clone(d);if(!Array.isArray(S.prizes))S.prizes=PRIZES.slice();fill();stat('Diperbarui dari server')}
+  },function(){}).then(function(){setTimeout(poll,1500)});
 }
 function enterCloud(){api('state').then(function(d){SRV=d;S=clone(d);if(!Array.isArray(S.prizes))S.prizes=PRIZES.slice();showApp();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
 function authLost(){TOKEN=null;try{localStorage.removeItem(TKEY)}catch(e){}showLock()}

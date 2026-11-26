@@ -244,13 +244,15 @@ function nextBatch(prizes,logLen){
 function pickBatch(names,mode,queue,count,rand,custom,remPrizes){
   var pool=names.slice(),out=[],n=Math.min(count,pool.length);
   if(mode==='custom'&&Array.isArray(custom)&&custom.length&&remPrizes>0){
-    var cSet={};custom.forEach(function(x){cSet[x.toLowerCase()]=true});
     for(var k=0;k<n;k++){
+      var cSet={};custom.forEach(function(x){cSet[x.toLowerCase()]=true});
       var remAfter=remPrizes-k,reservedIdx=[],otherIdx=[];
       for(var i=0;i<pool.length;i++)(cSet[pool[i].toLowerCase()]?reservedIdx:otherIdx).push(i);
       var src=(reservedIdx.length&&remAfter<=reservedIdx.length)?reservedIdx:(otherIdx.length?otherIdx:null);
       var idx=src?src[Math.floor(rand()*src.length)]:Math.floor(rand()*pool.length);
-      out.push(pool.splice(idx,1)[0]);
+      var picked=pool.splice(idx,1)[0];
+      out.push(picked);
+      for(var cj=0;cj<custom.length;cj++){if(custom[cj].toLowerCase()===picked.toLowerCase()){custom.splice(cj,1);break}}
     }
     return out;
   }
@@ -390,8 +392,8 @@ function spin(){
   s=load();var n=s.names.slice();
   if(!n.length)return;
   spinning=true;$('spin').disabled=true;audio(); // first press unlocks audio
-  var b=nextBatch(s.prizes,s.log.length),q=s.winners.slice(),rem=Math.max(0,(s.prizes?s.prizes.length:0)-s.log.length),drawn=pickBatch(n,s.mode,q,b.count,Math.random,s.custom,rem);
-  s.winners=q;save(s); // consume the queue now, so admin sees it
+  var b=nextBatch(s.prizes,s.log.length),q=s.winners.slice(),cq=(s.custom||[]).slice(),rem=Math.max(0,(s.prizes?s.prizes.length:0)-s.log.length),drawn=pickBatch(n,s.mode,q,b.count,Math.random,cq,rem);
+  s.winners=q;s.custom=cq;save(s); // consume the queues now, so admin sees it
   if(s.anim==='slot'){
     SlotMachine.spin($('slotMount'),{
       pool:n,winners:drawn,startNo:s.log.length+1,prize:b.prize,reduced:REDUCED,

@@ -43,19 +43,22 @@ export function nextBatch(prizes, logLen) {
 }
 
 // Draw `count` distinct winners from `names` (capped by available names);
-// preset consumes queue first; custom reserves `custom` names for the last `K` remaining prizes.
+// preset consumes queue first; custom reserves `custom` names for the last `K` remaining prizes and removes picked ones.
 export function pickBatch(names, mode, queue, count, rand, custom, remPrizes) {
   const pool = names.slice(), out = [], n = Math.min(count, pool.length);
   if (mode === "custom" && Array.isArray(custom) && custom.length && remPrizes > 0) {
-    const cSet = new Set(custom.map((x) => x.toLowerCase()));
     for (let k = 0; k < n; k++) {
+      const cSet = new Set(custom.map((x) => x.toLowerCase()));
       const remAfter = remPrizes - k, reservedIdx = [], otherIdx = [];
       for (let i = 0; i < pool.length; i++) (cSet.has(pool[i].toLowerCase()) ? reservedIdx : otherIdx).push(i);
       const src = (reservedIdx.length && remAfter <= reservedIdx.length)
         ? reservedIdx
         : (otherIdx.length ? otherIdx : null);
       const idx = src ? src[Math.floor(rand() * src.length)] : Math.floor(rand() * pool.length);
-      out.push(pool.splice(idx, 1)[0]);
+      const picked = pool.splice(idx, 1)[0];
+      out.push(picked);
+      const cj = custom.findIndex((x) => x.toLowerCase() === picked.toLowerCase());
+      if (cj >= 0) custom.splice(cj, 1);
     }
     return out;
   }
@@ -190,11 +193,12 @@ export class Room extends DurableObject {
   async draw() {
     const s = await this.state();
     if (!s.names.length) return [409, { error: "Roda kosong." }];
-    const before = s.names.slice(), q = s.winners.slice();
+    const before = s.names.slice(), q = s.winners.slice(), cq = (s.custom || []).slice();
     const { prize, count } = nextBatch(s.prizes, s.log.length);
     const remPrizes = Math.max(0, (Array.isArray(s.prizes) ? s.prizes.length : 0) - s.log.length);
-    const winners = pickBatch(before, s.mode, q, count, Math.random, s.custom, remPrizes);
+    const winners = pickBatch(before, s.mode, q, count, Math.random, cq, remPrizes);
     s.winners = q;
+    s.custom = cq;
     s.log.push(...winners);
     if (s.remove) {
       for (const name of winners) {
