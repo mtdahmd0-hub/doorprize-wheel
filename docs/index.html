@@ -374,7 +374,8 @@ function spin(){
   s.winners=q;save(s); // consume the queue now, so admin sees it
   if(s.anim==='slot'){
     SlotMachine.spin($('slotMount'),{
-      pool:n,winners:drawn,startNo:s.log.length+1,prize:b.prize,reduced:REDUCED,onTick:tickSound,
+      pool:n,winners:drawn,startNo:s.log.length+1,prize:b.prize,reduced:REDUCED,
+      onStart:slotStartSound,onRoll:slotRollSound,onTick:slotLockSound,
       onDone:function(){recordLocal(drawn);winSound();s=load();spinning=false;render();$('spin').focus()}
     });
     return;
@@ -443,30 +444,49 @@ document.addEventListener('keydown',function(e){
 });
 addEventListener('storage',function(e){if(e.key===KEY&&!spinning){s=load();render()}});
 
-// ---- sound: synthesized in the browser (no audio files). A click per segment passing the pin, a short fanfare on the win.
-var AC=null,SOUND=true;
+// ---- sound: synthesized in the browser (no audio files) with master compressor for clean gala punch.
+var AC=null,OUT=null,SOUND=true;
 try{SOUND=localStorage.getItem('doorprize-sound')!=='off'}catch(e){}
 function audio(){
   if(!SOUND)return null;
-  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()}catch(e){AC=null}
+  try{
+    if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();OUT=AC.createDynamicsCompressor();OUT.threshold.value=-14;OUT.ratio.value=6;OUT.connect(AC.destination)}
+    if(AC.state==='suspended')AC.resume();
+  }catch(e){AC=null}
   return AC;
 }
-function tickSound(){
+function tone(type,f1,f2,dur,vol,delay,cut){
   var a=audio();if(!a)return;
-  var t=a.currentTime,o=a.createOscillator(),f=a.createBiquadFilter(),g=a.createGain();
-  o.type='square';o.frequency.setValueAtTime(1500+Math.random()*250,t);o.frequency.exponentialRampToValueAtTime(420,t+.035);
-  f.type='bandpass';f.frequency.value=1900;f.Q.value=1.1;
-  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.32,t+.003);g.gain.exponentialRampToValueAtTime(.0001,t+.05);
-  o.connect(f);f.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.06);
+  var t=a.currentTime+(delay||0),o=a.createOscillator(),g=a.createGain();
+  o.type=type;o.frequency.setValueAtTime(f1,t);
+  if(f2&&f2!==f1)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+Math.min(.015,dur*.25));g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  if(cut){var f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=cut;o.connect(f);f.connect(g)}else o.connect(g);
+  g.connect(OUT||a.destination);o.start(t);o.stop(t+dur+.03);
+}
+function tickSound(){tone('square',1500+Math.random()*250,420,.045,.26,0,2600)}
+function slotStartSound(){
+  tone('sawtooth',140,70,.09,.28,0,900);
+  tone('triangle',260,920,.32,.22,.05,3200);
+  tone('sine',520,1320,.36,.15,.08);
+}
+function slotRollSound(){tone('triangle',760+Math.random()*160,290,.032,.11,0,2200)}
+function slotLockSound(step){
+  var sc=[523.25,587.33,659.25,783.99,880,1046.5],fr=sc[(step||0)%sc.length];
+  tone('sine',150,46,.14,.36,0);
+  tone('triangle',fr,fr,.26,.24,0);
+  tone('sine',fr*2,fr*2,.22,.13,.01);
 }
 function winSound(){
-  var a=audio();if(!a)return;
-  var t=a.currentTime;
-  [523.25,659.25,783.99,1046.5,1318.5].forEach(function(fr,i){
-    var o=a.createOscillator(),g=a.createGain(),st=t+i*.1,len=i===4?1.4:.4;
-    o.type='triangle';o.frequency.value=fr;
-    g.gain.setValueAtTime(.0001,st);g.gain.exponentialRampToValueAtTime(.2,st+.02);g.gain.exponentialRampToValueAtTime(.0001,st+len);
-    o.connect(g);g.connect(a.destination);o.start(st);o.stop(st+len+.05);
+  [130.81,196].forEach(function(b){tone('sawtooth',b,b,.85,.14,0,650)});
+  tone('sawtooth',261.63,261.63,1.5,.16,.38,800);
+  var mel=[[523.25,.08,.3],[659.25,.16,.3],[783.99,.24,.3],[1046.5,.34,.55],[987.77,.48,.22],[1046.5,.58,1.35]];
+  mel.forEach(function(n){
+    tone('sawtooth',n[0],n[0],n[2],.18,n[1],2400);
+    tone('triangle',n[0]*1.003,n[0],n[2],.16,n[1]);
+  });
+  [1318.5,1567.98,2093,2637.02,2093,3135.96].forEach(function(fr,i){
+    tone('sine',fr,fr,.45,.11,.55+i*.075);
   });
 }
 function soundLabel(){var b=$('sound');b.textContent=SOUND?'Suara: nyala':'Suara: mati';b.setAttribute('aria-pressed',String(SOUND))}
