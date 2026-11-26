@@ -364,7 +364,7 @@ function render(){
   if(slotMode&&window.SlotMachine)SlotMachine.setNames($('slotMount'),s.names);
   $('serialNo').textContent=cnt>1?('Undian No. '+pad(idx+1)+'–'+pad(idx+cnt)+' · '+cnt+' pemenang'):('Undian ke · No. '+pad(idx+1));
   $('serial').textContent=pz||('No. '+pad(idx+1));
-  $('count').textContent=s.names.length?s.names.length+' nama di roda':'Roda kosong. Isi nama peserta di halaman admin.';
+  $('count').textContent=s.names.length?s.names.length+' nama di roda':'';
   var ol=$('log');ol.innerHTML='';
   if(!s.log.length){var e=document.createElement('li');e.className='empty';e.textContent='Belum ada pemenang.';ol.appendChild(e)}
   s.log.forEach(function(w,i){var li=document.createElement('li'),p=(s.prizes&&s.prizes[i])||'';
