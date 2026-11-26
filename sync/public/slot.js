@@ -184,5 +184,6 @@
       }
     })(t0);
   }
+  injectCss();
   global.SlotMachine = { setNames: setNames, spin: spin };
 })(window);

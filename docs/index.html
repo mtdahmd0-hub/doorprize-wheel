@@ -37,6 +37,9 @@ body{color:var(--white);font-family:var(--ui);overflow-x:hidden;-webkit-font-smo
 
 .stage{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr);gap:clamp(24px,4vw,64px);align-items:center;min-height:100dvh;max-width:1680px;margin:0 auto;padding:clamp(16px,3vw,44px)}
 .stage.surge{animation:surge .6s cubic-bezier(.36,.07,.19,.97) both}
+.wheel-col{width:100%;display:grid;gap:14px;justify-items:center}
+.wheel-live{width:min(100%,760px);text-align:center}
+.wheel-hit{display:inline-block;margin:0 0 8px;padding:7px 18px;border-radius:999px;background:linear-gradient(135deg,#ffd95a,#ffc928);color:#08245a;font:900 clamp(.95rem,1.7vw,1.25rem)/1.2 var(--ui);text-transform:uppercase;letter-spacing:.04em;box-shadow:0 8px 24px rgba(255,201,40,.45);animation:pop .28s cubic-bezier(.2,1.5,.35,1)}
 .wheel{position:relative;width:min(100%,84dvh);aspect-ratio:1;margin:5% auto 0}
 #c{position:relative;display:block;width:100%;height:100%;filter:drop-shadow(0 26px 40px rgba(4,30,80,.5))}
 /* stage spotlights sweeping slowly behind the wheel */
@@ -159,15 +162,21 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   </svg>
 </div>
 <main class="stage" id="stage">
-  <section class="wheel" aria-label="Roda undian">
-    <div class="beams" aria-hidden="true"></div>
-    <canvas id="c" width="1000" height="1000" role="img" aria-label="Roda undian berisi nama peserta"></canvas>
-    <svg class="pin" id="pin" viewBox="0 0 80 112" aria-hidden="true">
-      <defs><linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#f5a623"/><stop offset=".5" stop-color="#ffd95a"/><stop offset="1" stop-color="#f5a623"/></linearGradient></defs>
-      <path d="M40 108 L13 36 A29 29 0 1 1 67 36 Z" fill="url(#pg)" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
-      <circle cx="40" cy="31" r="11" fill="#0d3577" stroke="#fff" stroke-width="3"/>
-    </svg>
-  </section>
+  <div class="wheel-col" id="wheelCol">
+    <section class="wheel" aria-label="Roda undian">
+      <div class="beams" aria-hidden="true"></div>
+      <canvas id="c" width="1000" height="1000" role="img" aria-label="Roda undian berisi nama peserta"></canvas>
+      <svg class="pin" id="pin" viewBox="0 0 80 112" aria-hidden="true">
+        <defs><linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#f5a623"/><stop offset=".5" stop-color="#ffd95a"/><stop offset="1" stop-color="#f5a623"/></linearGradient></defs>
+        <path d="M40 108 L13 36 A29 29 0 1 1 67 36 Z" fill="url(#pg)" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="40" cy="31" r="11" fill="#0d3577" stroke="#fff" stroke-width="3"/>
+      </svg>
+    </section>
+    <div class="wheel-live" id="wheelLive" hidden>
+      <p class="wheel-hit" id="wheelHit" hidden></p>
+      <div class="slot-live" style="margin-top:4px"><p class="slot-head" id="wheelHead"></p><div class="slot-grid" id="wheelGrid"></div></div>
+    </div>
+  </div>
   <div id="slotMount" hidden style="width:100%"></div>
   <aside class="panel">
     <div class="brand"><img src="logo-pln.svg" alt="PLN" width="123" height="44"><span>UIK Tanjung Jati B</span></div>
@@ -239,8 +248,8 @@ function pickBatch(names,mode,queue,count,rand){
 }
 function tone(i,n){var t=i%TONES.length;if(i===n-1&&i>0&&t===0)t=2;return TONES[t]}
 
-function buildWheel(){
-  var n=s.names,o=document.createElement('canvas');o.width=o.height=W;
+function buildWheel(list){
+  var n=list||s.names,o=document.createElement('canvas');o.width=o.height=W;
   var g=o.getContext('2d'),i;g.translate(C,C);
   if(!n.length){
     g.beginPath();g.arc(0,0,RS,0,TAU);g.fillStyle='#0d3577';g.fill();
@@ -293,7 +302,7 @@ function bulbLevel(i,now){
 }
 function mix(a,b,t){return 'rgb('+[0,1,2].map(function(k){return Math.round(a[k]+(b[k]-a[k])*t)}).join(',')+')'}
 var sparks=[];
-function draw(now){
+function draw(now,drawNo){
   now=now||performance.now();
   ctx.clearRect(0,0,W,W);
   // marquee ring: gold bezel, navy channel, gold inner rule
@@ -334,11 +343,11 @@ function draw(now){
   ctx.beginPath();ctx.arc(C,C,94,0,TAU);ctx.fillStyle=H;ctx.fill();
   ctx.fillStyle='#cfe6ff';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.font='800 15px Montserrat, sans-serif';ctx.fillText('N O.',C,C-34);
-  ctx.fillStyle='#ffffff';ctx.font='60px Anton, Impact, sans-serif';ctx.fillText(pad(s.log.length+1),C,C+14);
+  ctx.fillStyle='#ffffff';ctx.font='60px Anton, Impact, sans-serif';ctx.fillText(pad(drawNo!=null?drawNo:s.log.length+1),C,C+14);
 }
 function render(){
   var idx=s.log.length,b=nextBatch(s.prizes,idx),pz=b.prize,cnt=b.count,slotMode=s.anim==='slot';
-  document.querySelector('.wheel').hidden=slotMode;$('slotMount').hidden=!slotMode;
+  $('wheelCol').hidden=slotMode;$('slotMount').hidden=!slotMode;
   if(slotMode&&window.SlotMachine)SlotMachine.setNames($('slotMount'),s.names);
   $('serialNo').textContent=cnt>1?('Undian No. '+pad(idx+1)+'–'+pad(idx+cnt)+' · '+cnt+' pemenang'):('Undian ke · No. '+pad(idx+1));
   $('serial').textContent=pz||('No. '+pad(idx+1));
@@ -380,21 +389,43 @@ function spin(){
     });
     return;
   }
-  var i=n.indexOf(drawn[0]),seg=TAU/n.length,jitter=(Math.random()-.5)*seg*.7;
-  var tgt=((-Math.PI/2-(i+.5)*seg+jitter)%TAU+TAU)%TAU,cur=(rot%TAU+TAU)%TAU;
-  var delta=(tgt-cur+TAU)%TAU+TAU*(REDUCED?1:6+Math.floor(Math.random()*3));
-  var wind=REDUCED?0:Math.min(.35,seg*.6),windDur=REDUCED?0:420,dur=REDUCED?1400:6200;
-  var start=rot,t0=performance.now(),prev=rot;lastTick=null;lights='spin';
-  (function step(t){
-    var e=t-t0;
-    if(e<windDur){rot=start-wind*Math.sin(e/windDur*Math.PI/2)}
-    else{var k=Math.min(1,(e-windDur)/dur),ez=1-Math.pow(1-k,4);rot=start-wind+(delta+wind)*ez}
-    chasePos+=(rot-prev)*BULBS/TAU*1.6+.04;prev=rot; // lights race with the wheel, then slow with it
-    var b2=Math.floor(((-Math.PI/2-rot)%TAU+TAU)%TAU/seg);
-    if(lastTick!==null&&b2!==lastTick){flick();tickSound()}lastTick=b2;
-    draw(t);
-    if(e<windDur+dur)requestAnimationFrame(step);else done(drawn,b.prize);
-  })(t0);
+  var curNames=n.slice(),startNo=s.log.length+1,total=drawn.length,multi=total>1;
+  var holdMs=REDUCED?120:(total<=5?850:total<=10?680:520);
+  $('wheelLive').hidden=!multi;$('wheelGrid').innerHTML='';$('wheelHit').hidden=true;
+  if(multi)$('wheelHead').textContent=(b.prize?b.prize+' · ':'')+total+' Pemenang';
+  (function runStep(k){
+    var nm=drawn[k],idx=curNames.indexOf(nm);if(idx<0)idx=0;
+    buildWheel(curNames);
+    var seg=TAU/curNames.length,jitter=(Math.random()-.5)*seg*.7;
+    var tgt=((-Math.PI/2-(idx+.5)*seg+jitter)%TAU+TAU)%TAU,cur=(rot%TAU+TAU)%TAU;
+    var turns=REDUCED?1:(multi?(k===0?3:2):6+Math.floor(Math.random()*3));
+    var delta=(tgt-cur+TAU)%TAU+TAU*turns;
+    var wind=REDUCED?0:Math.min(.35,seg*.6),windDur=REDUCED?0:(multi?220:420);
+    var dur=REDUCED?(multi?320:1400):(multi?(k===0?2200:(total<=5?1300:total<=10?1050:820)):6200);
+    var start=rot,t0=performance.now(),prev=rot;lastTick=null;lights='spin';
+    (function step(t){
+      var e=t-t0;
+      if(e<windDur){rot=start-wind*Math.sin(e/windDur*Math.PI/2)}
+      else{var k2=Math.min(1,(e-windDur)/dur),ez=1-Math.pow(1-k2,4);rot=start-wind+(delta+wind)*ez}
+      chasePos+=(rot-prev)*BULBS/TAU*1.6+.04;prev=rot;
+      var b2=Math.floor(((-Math.PI/2-rot)%TAU+TAU)%TAU/seg);
+      if(lastTick!==null&&b2!==lastTick){flick();tickSound()}lastTick=b2;
+      draw(t,startNo+k);
+      if(e<windDur+dur){requestAnimationFrame(step);return}
+      if(!multi){done(drawn,b.prize);return}
+      slotLockSound(k);lights='win';
+      var hit=$('wheelHit');hit.textContent='No. '+pad(startNo+k)+' · '+nm;hit.hidden=false;
+      var c=document.createElement('div');c.className='slot-card';
+      c.innerHTML='<span class="no">No. '+pad(startNo+k)+'</span><span class="nm"></span>';
+      c.querySelector('.nm').textContent=nm;$('wheelGrid').appendChild(c);
+      setTimeout(function(){
+        if(k+1<total){
+          if(s.remove){var j=curNames.indexOf(nm);if(j>=0)curNames.splice(j,1)}
+          runStep(k+1);
+        }else done(drawn,b.prize);
+      },holdMs);
+    })(t0);
+  })(0);
 }
 function done(drawn,prize){
   // record and remove in one write, so a reload mid-reveal can't let the same name win twice;
@@ -429,6 +460,7 @@ function done(drawn,prize){
 function closeReveal(){
   if(!revealOpen)return;
   $('reveal').hidden=true;revealOpen=false;
+  $('wheelLive').hidden=true;$('wheelHit').hidden=true;$('wheelGrid').innerHTML='';
   s=load();spinning=false;render();$('spin').focus();
 }
 // light show runs continuously while the wheel rests (the spin loop draws its own frames)
