@@ -33,6 +33,22 @@ export function pick(names, mode, queue, rand) {
   return Math.floor(rand() * names.length);
 }
 
+// Next prize category starting at `logLen` and how many consecutive draws share that prize.
+export function nextBatch(prizes, logLen) {
+  const prize = (prizes && prizes[logLen]) || "";
+  if (!prize) return { prize: "", count: 1 };
+  let count = 1;
+  while (prizes[logLen + count] === prize) count++;
+  return { prize, count };
+}
+
+// Draw `count` distinct winners from `names` (capped by available names); preset consumes queue first, remainder random.
+export function pickBatch(names, mode, queue, count, rand) {
+  const pool = names.slice(), out = [], n = Math.min(count, pool.length);
+  for (let k = 0; k < n; k++) out.push(pool.splice(pick(pool, mode, queue, rand), 1)[0]);
+  return out;
+}
+
 // Validate an admin patch at the trust boundary; returns null when anything is malformed.
 export function clean(x) {
   if (!x || typeof x !== "object") return null;
@@ -146,10 +162,10 @@ export class Room extends DurableObject {
     const [st, r] = await this.draw();
     if (st !== 200) return [st, r];
     await this.ctx.storage.put("lastSpin", now);
-    return [200, { name: r.name, before: r.before, state: publicView(r.state) }];
+    return [200, { name: r.name, names: r.names, prize: r.prize, before: r.before, state: publicView(r.state) }];
   }
 
-  // Draw, record and (optionally) remove the winner in one write.
+  // Draw, record and (optionally) remove the winner(s) in one write.
   async spin(token) {
     if (!(await this.ok(token))) return [401, { error: "Sesi habis. Masuk lagi." }];
     return this.draw();
@@ -159,13 +175,19 @@ export class Room extends DurableObject {
     const s = await this.state();
     if (!s.names.length) return [409, { error: "Roda kosong." }];
     const before = s.names.slice(), q = s.winners.slice();
-    const name = before[pick(before, s.mode, q, Math.random)];
+    const { prize, count } = nextBatch(s.prizes, s.log.length);
+    const winners = pickBatch(before, s.mode, q, count, Math.random);
     s.winners = q;
-    s.log.push(name);
-    if (s.remove) { const j = s.names.indexOf(name); if (j >= 0) s.names.splice(j, 1); }
+    s.log.push(...winners);
+    if (s.remove) {
+      for (const name of winners) {
+        const j = s.names.indexOf(name);
+        if (j >= 0) s.names.splice(j, 1);
+      }
+    }
     s.v++;
     await this.ctx.storage.put("s", s);
-    return [200, { name, before, state: s }];
+    return [200, { name: winners[0], names: winners, prize, before, state: s }];
   }
 }
 

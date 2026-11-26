@@ -185,7 +185,7 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
           <label class="f" for="winners">Antrean pemenang, urut</label>
           <textarea id="winners" spellcheck="false" placeholder="Satu nama per baris, sama persis dengan daftar peserta"></textarea>
           <ol class="q" id="wcheck"></ol>
-          <p class="note">Tiap putaran memakai nama teratas. Nama yang tidak ada di roda dilewati. Bila antrean habis, roda kembali acak.</p>
+          <p class="note">Tiap putaran kategori langsung mengambil sejumlah hadiah di kategori tersebut dari antrean teratas (bila antrean kurang, sisanya dipilih acak). Nama yang tidak ada di roda dilewati.</p>
         </div>
       </section>
       <section class="box">
@@ -317,11 +317,12 @@ function fill(){ // state -> form; never overwrite the field being typed in
   view(s);
 }
 function view(s){
-  var pre=s.mode==='preset',pz=s.prizes||[],np=pz[s.log.length]||'';
+  var pre=s.mode==='preset',pz=s.prizes||[],idx=s.log.length,np=pz[idx]||'',cnt=1;
+  if(np)while(pz[idx+cnt]===np)cnt++;
   $('presetBox').hidden=!pre;
   $('modeChip').textContent=pre?'Mode 2 · Ditentukan':'Mode 1 · Acak';$('modeChip').classList.toggle('preset',pre);
   $('ncount').textContent=s.names.length;$('pcount').textContent=pz.length;
-  $('pnext').textContent=np?'Berikutnya (No. '+pad(s.log.length+1)+'): '+np:'Tidak ada nama hadiah tersisa (pakai No. '+pad(s.log.length+1)+').';
+  $('pnext').textContent=np?('Berikutnya (No. '+pad(idx+1)+(cnt>1?'–'+pad(idx+cnt):'')+' · '+cnt+' pemenang): '+np):'Tidak ada nama hadiah tersisa (pakai No. '+pad(idx+1)+').';
   var low=s.names.map(function(x){return x.toLowerCase()}),q=$('wcheck');q.innerHTML='';
   s.winners.forEach(function(w){var li=document.createElement('li'),ok=low.indexOf(w.toLowerCase())>=0;
     li.className=ok?'ok':'bad';li.innerHTML=svg(ok?'i-ok':'i-x')+'<span class="nm"></span>'+(ok?'':'<span class="why">tidak ada di daftar peserta</span>');

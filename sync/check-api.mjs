@@ -47,6 +47,12 @@ assert.deepEqual(ws.prizes, ["Kursi lipat", "Blender"], "prizes synced to the wh
 assert.deepEqual(ws.names, ["Ani", "Budi"]);
 const [, wsp] = await call("wheel/spin", { method: "POST" });
 assert.equal(wsp.name, "Ani", "wheel spin follows the queue");
+assert.deepEqual(wsp.names, ["Ani"]);
 assert.deepEqual(wsp.state.winners, []);
 assert.equal((await call("wheel/spin", { method: "POST" }))[0], 429, "back-to-back spin blocked");
+await call("state", { method: "PUT", body: JSON.stringify({ names: ["Ani", "Budi", "Cici"], mode: "preset", winners: ["Cici", "Ani"], prizes: ["Kursi", "Kursi", "Blender"], remove: true, log: [] }) }, token);
+const [, bsp] = await call("spin", { method: "POST" }, token);
+assert.deepEqual(bsp.names, ["Cici", "Ani"], "category batch draws all items in the category");
+assert.equal(bsp.prize, "Kursi");
+assert.deepEqual(bsp.state.names, ["Budi"]);
 console.log("check-api: all assertions passed");
