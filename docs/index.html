@@ -390,7 +390,7 @@ function spin(){
     return;
   }
   var curNames=n.slice(),startNo=s.log.length+1,total=drawn.length,multi=total>1;
-  var holdMs=REDUCED?120:(total<=5?850:total<=10?680:520);
+  var holdMs=REDUCED?120:(total<=5?1200:total<=10?950:750);
   $('wheelLive').hidden=!multi;$('wheelGrid').innerHTML='';$('wheelHit').hidden=true;
   if(multi)$('wheelHead').textContent=(b.prize?b.prize+' · ':'')+total+' Pemenang';
   (function runStep(k){
@@ -398,10 +398,10 @@ function spin(){
     buildWheel(curNames);
     var seg=TAU/curNames.length,jitter=(Math.random()-.5)*seg*.7;
     var tgt=((-Math.PI/2-(idx+.5)*seg+jitter)%TAU+TAU)%TAU,cur=(rot%TAU+TAU)%TAU;
-    var turns=REDUCED?1:(multi?(k===0?3:2):6+Math.floor(Math.random()*3));
+    var turns=REDUCED?1:(multi?(k===0?4:3):6+Math.floor(Math.random()*3));
     var delta=(tgt-cur+TAU)%TAU+TAU*turns;
-    var wind=REDUCED?0:Math.min(.35,seg*.6),windDur=REDUCED?0:(multi?220:420);
-    var dur=REDUCED?(multi?320:1400):(multi?(k===0?2200:(total<=5?1300:total<=10?1050:820)):6200);
+    var wind=REDUCED?0:Math.min(.35,seg*.6),windDur=REDUCED?0:(multi?280:420);
+    var dur=REDUCED?(multi?320:1400):(multi?(k===0?3400:(total<=5?2600:total<=10?2200:1800)):6200);
     var start=rot,t0=performance.now(),prev=rot;lastTick=null;lights='spin';
     (function step(t){
       var e=t-t0;
