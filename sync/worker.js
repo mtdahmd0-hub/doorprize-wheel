@@ -20,7 +20,7 @@ const DEFAULT_PRIZES = [
   ["Grandprize 1 (Emasku 2gr)", 1],
 ].flatMap(([name, n]) => Array(n).fill(name));
 
-const DEF = { names: ["A", "B", "C", "D", "E"], mode: "random", winners: [], remove: true, log: [], prizes: DEFAULT_PRIZES };
+const DEF = { names: ["A", "B", "C", "D", "E"], mode: "random", winners: [], remove: true, log: [], prizes: DEFAULT_PRIZES, anim: "wheel" };
 const SESSION_MS = 12 * 3600e3;
 const SPIN_GAP_MS = 8000; // longer than one spin animation
 
@@ -57,13 +57,14 @@ export function clean(x) {
   const o = {};
   for (const k of ["names", "winners", "log", "prizes"]) if (k in x) { const l = list(x[k]); if (!l) return null; o[k] = l; }
   if ("mode" in x) { if (x.mode !== "random" && x.mode !== "preset") return null; o.mode = x.mode; }
+  if ("anim" in x) { if (x.anim !== "wheel" && x.anim !== "slot") return null; o.anim = x.anim; }
   if ("remove" in x) { if (typeof x.remove !== "boolean") return null; o.remove = x.remove; }
   return o;
 }
 
 // What the wheel computer may see: everything except the preset winner queue.
 export function publicView(s) {
-  return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], prizes: Array.isArray(s.prizes) ? s.prizes : DEFAULT_PRIZES, v: s.v };
+  return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], prizes: Array.isArray(s.prizes) ? s.prizes : DEFAULT_PRIZES, anim: s.anim === "slot" ? "slot" : "wheel", v: s.v };
 }
 
 async function pbkdf2(password, salt) {
@@ -82,6 +83,7 @@ export class Room extends DurableObject {
   async state() {
     const s = Object.assign({}, DEF, { v: 0 }, await this.ctx.storage.get("s"));
     if (!Array.isArray(s.prizes)) s.prizes = DEFAULT_PRIZES.slice();
+    if (s.anim !== "wheel" && s.anim !== "slot") s.anim = "wheel";
     return s;
   }
 

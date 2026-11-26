@@ -29,6 +29,7 @@ body{color:var(--white);font-family:var(--ui);overflow-x:hidden;-webkit-font-smo
 ::selection{background:var(--volt);color:var(--navy)}
 :focus-visible{outline:3px solid var(--volt);outline-offset:3px}
 *{scrollbar-color:rgba(255,255,255,.4) transparent;scrollbar-width:thin}
+[hidden]{display:none!important}
 
 /* horizon: skyline of the energy landscape + the blue-to-gold sweep from the backdrop */
 .horizon{position:fixed;left:0;right:0;bottom:0;height:min(30vh,300px);z-index:0;pointer-events:none}
@@ -167,6 +168,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <circle cx="40" cy="31" r="11" fill="#0d3577" stroke="#fff" stroke-width="3"/>
     </svg>
   </section>
+  <div id="slotMount" hidden style="width:100%"></div>
   <aside class="panel">
     <div class="brand"><img src="logo-pln.svg" alt="PLN" width="123" height="44"><span>UIK Tanjung Jati B</span></div>
     <p class="event">Customer Gathering</p>
@@ -201,11 +203,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   </div>
 </div>
 
+<script src="slot.js"></script>
 <script>
 (function(){
 var KEY='doorprize',TAU=2*Math.PI;
 var PRIZES=[['Kursi lipat Montec (Azko)',15],['Voucher Belanja Eiger 200k',10],['Kipas angin portabel (Azko)',10],['Picas texas botol vacuum flask (Azko)',10],['Kompor Culinart (Azko)',5],['Soleil Sleeping Bag 250 (Azko)',5],['Blender',3],['Sleeplite kasur lipat (Azko)',5],['Oven',5],['Kris Air Fryer (Azko)',3],['Xiaomi Strika uap',3],['Grandprize 3 (Emasku 0.5 gr)',1],['Grand prize 2 (Emasku 1 gr)',1],['Grandprize 1 (Emasku 2gr)',1]].reduce(function(a,x){for(var k=0;k<x[1];k++)a.push(x[0]);return a},[]);
-var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[],prizes:PRIZES};
+var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[],prizes:PRIZES,anim:'wheel'};
 // Storage: this browser (GitHub Pages, one computer) or the sync server (Cloudflare, two computers).
 var CLOUD=false,S=null,polling=false;
 function clone(o){return JSON.parse(JSON.stringify(o))}
@@ -345,7 +348,9 @@ function draw(now){
   ctx.fillStyle='#ffffff';ctx.font='60px Anton, Impact, sans-serif';ctx.fillText(pad(s.log.length+1),C,C+14);
 }
 function render(){
-  var idx=s.log.length,b=nextBatch(s.prizes,idx),pz=b.prize,cnt=b.count;
+  var idx=s.log.length,b=nextBatch(s.prizes,idx),pz=b.prize,cnt=b.count,slotMode=s.anim==='slot';
+  document.querySelector('.wheel').hidden=slotMode;$('slotMount').hidden=!slotMode;
+  if(slotMode&&window.SlotMachine)SlotMachine.setNames($('slotMount'),s.names);
   $('serialNo').textContent=cnt>1?('Undian No. '+pad(idx+1)+'–'+pad(idx+cnt)+' · '+cnt+' pemenang'):('Undian ke · No. '+pad(idx+1));
   $('serial').textContent=pz||('No. '+pad(idx+1));
   $('count').textContent=s.names.length?s.names.length+' nama di roda':'Roda kosong. Isi nama peserta di halaman admin.';
@@ -357,7 +362,7 @@ function render(){
   ol.scrollTop=ol.scrollHeight;
   $('spin').textContent=cnt>1?('Putar · '+cnt+' Pemenang'):'Putar roda';
   $('spin').disabled=spinning||!s.names.length;
-  buildWheel();draw();
+  if(!slotMode){buildWheel();draw()}
 }
 
 var pin=$('pin');
@@ -366,14 +371,31 @@ function flick(){
   pin.style.transition='none';pin.style.transform='rotate(-16deg)';
   requestAnimationFrame(function(){pin.style.transition='transform .22s cubic-bezier(.2,1.6,.4,1)';pin.style.transform='rotate(0)'});
 }
+function recordLocal(drawn){
+  if(CLOUD)return;
+  s=load();
+  drawn.forEach(function(nm){s.log.push(nm);if(s.remove){var j=s.names.indexOf(nm);if(j>=0)s.names.splice(j,1)}});
+  save(s);
+}
+function runSlot(pool,drawn,startNo,prize,persistLocal){
+  SlotMachine.spin($('slotMount'),{
+    pool:pool,winners:drawn,startNo:startNo,prize:prize,reduced:REDUCED,onTick:tickSound,
+    onDone:function(){if(persistLocal)recordLocal(drawn);winSound();s=load();spinning=false;render();$('spin').focus()}
+  });
+}
 function spin(){
   if(spinning||!s.names.length)return;
   spinning=true;$('spin').disabled=true;audio(); // first press unlocks audio
   if(CLOUD){ // the server draws, records and removes; we animate to its answer on the list it drew from
     api('wheel/spin',{method:'POST'}).then(function(r){
       S=r.state;
-      if(JSON.stringify(r.before)!==JSON.stringify(s.names)){s.names=r.before;buildWheel()}
       var drawn=Array.isArray(r.names)&&r.names.length?r.names:[r.name];
+      if(S.anim==='slot'){
+        document.querySelector('.wheel').hidden=true;$('slotMount').hidden=false;
+        runSlot(r.before,drawn,r.state.log.length-drawn.length+1,r.prize||'',false);
+        return;
+      }
+      if(JSON.stringify(r.before)!==JSON.stringify(s.names)){s.names=r.before;buildWheel()}
       turn(r.before.indexOf(drawn[0]),r.before,drawn,r.prize||'');
     },function(err){spinning=false;render();alert(err.message)});
     return;
@@ -382,6 +404,7 @@ function spin(){
   if(!n.length){spinning=false;render();return}
   var b=nextBatch(s.prizes,s.log.length),q=s.winners.slice(),drawn=pickBatch(n,s.mode,q,b.count,Math.random);
   s.winners=q;save(s); // consume the queue now, so admin sees it
+  if(s.anim==='slot'){runSlot(n,drawn,s.log.length+1,b.prize,true);return}
   turn(n.indexOf(drawn[0]),n,drawn,b.prize);
 }
 function turn(i,n,drawn,prize){
@@ -404,11 +427,8 @@ function turn(i,n,drawn,prize){
 function done(drawn,prize){
   // record and remove in one write, so a reload mid-reveal can't let the same name win twice;
   // the wheel on screen keeps the winning slice until "Lanjut"
+  recordLocal(drawn);
   s=load();
-  if(!CLOUD){
-    drawn.forEach(function(nm){s.log.push(nm);if(s.remove){var j=s.names.indexOf(nm);if(j>=0)s.names.splice(j,1)}});
-    save(s);
-  }
   winSound();lights='win';setTimeout(function(){lights='idle'},2600);
   var end=s.log.length,start=end-drawn.length+1,pz=prize||(s.prizes&&s.prizes[start-1])||'';
   var g=$('winGrid');g.innerHTML='';
