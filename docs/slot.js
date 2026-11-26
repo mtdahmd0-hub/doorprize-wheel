@@ -79,17 +79,23 @@
       r.locked = false; r.el.classList.remove("locked"); r.y = 0;
       fillTrack(r.track, pool, idx * 4);
     });
-    var n = winners.length, step = opts.reduced ? 50 : (n === 1 ? 450 : Math.max(240, Math.min(500, Math.round(4500 / n))));
-    var baseDelay = opts.reduced ? 80 : (n === 1 ? 1200 : 520), events = [];
+    var n = winners.length, events = [];
     if (n === 1) {
-      [0, 1, 2].forEach(function (ri, idx) { events.push({ t: baseDelay + idx * step, reel: ri, name: winners[0], card: idx === 2 ? 0 : -1 }); });
+      var d0 = opts.reduced ? 80 : 1600, gap = opts.reduced ? 50 : 650;
+      [0, 1, 2].forEach(function (ri, idx) { events.push({ t: d0 + idx * gap, type: "lock", reel: ri, name: winners[0] }); });
+      events.push({ t: d0 + 2 * gap + (opts.reduced ? 40 : 420), type: "card", idx: 0 });
     } else {
+      var spinMs = opts.reduced ? 40 : (n <= 5 ? 850 : n <= 10 ? 620 : 460);
+      var holdMs = opts.reduced ? 40 : (n <= 5 ? 580 : n <= 10 ? 440 : 340);
+      var t = opts.reduced ? 80 : 1450;
       for (var k = 0; k < n; k++) {
-        var t = baseDelay + k * step, ri = k % 3;
-        events.push({ t: t, reel: ri, name: winners[k], card: k });
-        if (k + 3 < n) events.push({ t: t + Math.round(step * 1.45), unlock: ri });
+        var ri = k % 3;
+        events.push({ t: t, type: "lock", reel: ri, name: winners[k] });
+        events.push({ t: t + Math.round(holdMs * 0.55), type: "card", idx: k });
+        if (k < n - 3) events.push({ t: t + holdMs, type: "unlock", reel: ri });
+        t += holdMs + spinMs;
       }
-      if (n === 2) events.push({ t: baseDelay + step + 220, reel: 2, name: winners[1], card: -1 });
+      if (n === 2) events.push({ t: t - spinMs + 260, type: "lock", reel: 2, name: winners[1] });
     }
     events.sort(function (a, b) { return a.t - b.t; });
     var t0 = performance.now(), prev = t0, ei = 0, lastT = events.length ? events[events.length - 1].t : 0;
@@ -103,14 +109,15 @@
       var elapsed = now - t0, dt = Math.min(48, now - prev); prev = now;
       while (ei < events.length && elapsed >= events[ei].t) {
         var ev = events[ei++];
-        if (typeof ev.unlock === "number") {
-          st.reels[ev.unlock].locked = false;
-          st.reels[ev.unlock].el.classList.remove("locked");
-          fillTrack(st.reels[ev.unlock].track, pool, ei);
-        } else {
+        if (ev.type === "unlock") {
+          st.reels[ev.reel].locked = false;
+          st.reels[ev.reel].el.classList.remove("locked");
+          fillTrack(st.reels[ev.reel].track, pool, ei);
+        } else if (ev.type === "lock") {
           lockReel(st.reels[ev.reel], ev.name, pool);
           if (opts.onTick) opts.onTick();
-          if (ev.card >= 0) addCard(ev.card);
+        } else if (ev.type === "card") {
+          addCard(ev.idx);
         }
       }
       var rowH = st.reels[0].track.children[0].offsetHeight || 70, loopH = LOOP * rowH;
@@ -119,7 +126,7 @@
         r.y = (r.y + r.speed * dt) % loopH;
         r.track.style.transform = "translate3d(0," + (-r.y) + "px,0)";
       });
-      if (elapsed < lastT + (opts.reduced ? 60 : 320)) requestAnimationFrame(frame);
+      if (elapsed < lastT + (opts.reduced ? 60 : 520)) requestAnimationFrame(frame);
       else { st.active = false; if (opts.onDone) opts.onDone(); }
     })(t0);
   }

@@ -47,7 +47,6 @@ svg.i{width:1.1em;height:1.1em;flex:none;vertical-align:-.15em}
 .wrap{max-width:1180px;margin:0 auto;padding:clamp(16px,3vw,32px);display:grid;grid-template-columns:1fr 1.15fr;gap:clamp(16px,2.4vw,28px);align-items:start}
 .col{display:grid;gap:clamp(16px,2.4vw,28px)}
 .box{background:var(--ink-1);border:1px solid var(--rule);border-radius:14px;padding:20px}
-.slot-panel{grid-column:1/-1}
 .box h2{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;letter-spacing:.01em;font-size:1.35rem;letter-spacing:-.01em}
 .box .sub{margin:4px 0 14px;color:var(--muted);font-size:.88rem}
 .hd{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
@@ -153,13 +152,6 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
     </div>
   </header>
   <main class="wrap">
-    <section class="box slot-panel">
-      <div class="hd" style="flex-wrap:wrap;margin-bottom:12px">
-        <div><h2>Mesin Slot Undian</h2><p class="sub" id="slotSub" style="margin:4px 0 0"></p></div>
-        <button class="btn primary" id="adminSpin" type="button">Putar Slot</button>
-      </div>
-      <div id="adminSlotMount"></div>
-    </section>
     <div class="col">
       <section class="box">
         <div class="hd"><h2>Peserta</h2><span class="tally" id="ncount">0</span></div>
@@ -230,14 +222,13 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
   </form>
 </dialog>
 
-<script src="slot.js"></script>
 <script>
 (function(){
 var KEY='doorprize',AUTH='doorprize-auth',SESS='doorprize-unlocked',TAU=2*Math.PI;
 var PRIZES=[['Kursi lipat Montec (Azko)',15],['Voucher Belanja Eiger 200k',10],['Kipas angin portabel (Azko)',10],['Picas texas botol vacuum flask (Azko)',10],['Kompor Culinart (Azko)',5],['Soleil Sleeping Bag 250 (Azko)',5],['Blender',3],['Sleeplite kasur lipat (Azko)',5],['Oven',5],['Kris Air Fryer (Azko)',3],['Xiaomi Strika uap',3],['Grandprize 3 (Emasku 0.5 gr)',1],['Grand prize 2 (Emasku 1 gr)',1],['Grandprize 1 (Emasku 2gr)',1]].reduce(function(a,x){for(var k=0;k<x[1];k++)a.push(x[0]);return a},[]);
 var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[],prizes:PRIZES,anim:'wheel'};
 // Storage: this browser (GitHub Pages, one computer) or the sync server (Cloudflare, two computers).
-var SETUP=false,CLOUD=false,S=null,SRV=null,TOKEN=null,TKEY='doorprize-token',timer=null,polling=false,spinning=false;
+var SETUP=false,CLOUD=false,S=null,SRV=null,TOKEN=null,TKEY='doorprize-token',timer=null,polling=false;
 var FIELDS=['names','mode','winners','remove','log','prizes','anim'];
 try{TOKEN=localStorage.getItem(TKEY)}catch(e){}
 function clone(o){return JSON.parse(JSON.stringify(o))}
@@ -379,11 +370,7 @@ function view(s){
   $('presetBox').hidden=!pre;
   $('modeChip').textContent=pre?'Mode 2 · Ditentukan':'Mode 1 · Acak';$('modeChip').classList.toggle('preset',pre);
   $('ncount').textContent=s.names.length;$('pcount').textContent=pz.length;
-  var nxt=np?('Berikutnya (No. '+pad(idx+1)+(cnt>1?'–'+pad(idx+cnt):'')+' · '+cnt+' pemenang): '+np):'Tidak ada nama hadiah tersisa (pakai No. '+pad(idx+1)+').';
-  $('pnext').textContent=nxt;$('slotSub').textContent=nxt;
-  $('adminSpin').textContent=cnt>1?('Putar Slot · '+cnt+' Pemenang'):'Putar Slot';
-  $('adminSpin').disabled=spinning||!s.names.length;
-  if(window.SlotMachine)SlotMachine.setNames($('adminSlotMount'),s.names);
+  $('pnext').textContent=np?('Berikutnya (No. '+pad(idx+1)+(cnt>1?'–'+pad(idx+cnt):'')+' · '+cnt+' pemenang): '+np):'Tidak ada nama hadiah tersisa (pakai No. '+pad(idx+1)+').';
   var low=s.names.map(function(x){return x.toLowerCase()}),q=$('wcheck');q.innerHTML='';
   s.winners.forEach(function(w){var li=document.createElement('li'),ok=low.indexOf(w.toLowerCase())>=0;
     li.className=ok?'ok':'bad';li.innerHTML=svg(ok?'i-ok':'i-x')+'<span class="nm"></span>'+(ok?'':'<span class="why">tidak ada di daftar peserta</span>');
@@ -400,33 +387,6 @@ function commit(){
 ['names','winners','prizes'].forEach(function(id){$(id).addEventListener('input',commit)});
 $('defPrizes').addEventListener('click',function(){var s=load();s.prizes=PRIZES.slice();save(s);fill()});
 document.querySelectorAll('input[name=mode],input[name=anim]').forEach(function(r){r.addEventListener('change',commit)});
-function pickOne(pool,mode,q){
-  if(mode==='preset'){var low=pool.map(function(x){return x.toLowerCase()});while(q.length){var i=low.indexOf(q.shift().toLowerCase());if(i>=0)return i}}
-  return Math.floor(Math.random()*pool.length);
-}
-$('adminSpin').addEventListener('click',function(){
-  if(spinning)return;
-  var s=load();if(!s.names.length)return;
-  spinning=true;$('adminSpin').disabled=true;
-  var red=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(CLOUD){
-    clearTimeout(timer);
-    flush().then(function(){return api('spin',{method:'POST'})}).then(function(r){
-      SRV=r.state;S=clone(r.state);
-      var drawn=Array.isArray(r.names)&&r.names.length?r.names:[r.name];
-      SlotMachine.spin($('adminSlotMount'),{pool:r.before,winners:drawn,startNo:r.state.log.length-drawn.length+1,prize:r.prize||'',reduced:red,onDone:function(){spinning=false;fill();stat('Undian selesai')}});
-    },function(err){spinning=false;view(load());stat('Gagal undi: '+err.message)});
-    return;
-  }
-  var pool=s.names.slice(),pz=s.prizes||[],idx=s.log.length,pr=pz[idx]||'',cnt=1;
-  if(pr)while(pz[idx+cnt]===pr)cnt++;
-  var q=s.winners.slice(),drawn=[],n=Math.min(cnt,pool.length);
-  for(var k=0;k<n;k++)drawn.push(pool.splice(pickOne(pool,s.mode,q),1)[0]);
-  SlotMachine.spin($('adminSlotMount'),{pool:s.names.slice(),winners:drawn,startNo:idx+1,prize:pr,reduced:red,onDone:function(){
-    var cur=load();cur.winners=q;drawn.forEach(function(nm){cur.log.push(nm);if(cur.remove){var j=cur.names.indexOf(nm);if(j>=0)cur.names.splice(j,1)}});
-    save(cur);spinning=false;fill();
-  }});
-});
 $('remove').addEventListener('change',commit);
 $('clearLog').addEventListener('click',function(){if(confirm('Hapus riwayat pemenang? Nomor undian kembali ke 001.')){var s=load();s.log=[];save(s);fill()}});
 $('reset').addEventListener('click',function(){if(confirm('Reset peserta, antrean, dan riwayat ke awal? Password tetap.')){
@@ -436,7 +396,7 @@ addEventListener('storage',function(e){if(e.key===KEY&&!$('app').hidden&&!CLOUD)
 // two-computer mode: follow the server every 1.5 s (draws made on the wheel computer appear here)
 function poll(){
   if(!CLOUD||!TOKEN){polling=false;return}
-  api('state?v='+SRV.v).then(function(d){if(!d.same){SRV=d;if(!timer&&!spinning){S=clone(d);if(!Array.isArray(S.prizes))S.prizes=PRIZES.slice();fill();stat('Diperbarui dari server')}}},function(){})
+  api('state?v='+SRV.v).then(function(d){if(!d.same){SRV=d;if(!timer){S=clone(d);if(!Array.isArray(S.prizes))S.prizes=PRIZES.slice();fill();stat('Diperbarui dari server')}}},function(){})
     .then(function(){setTimeout(poll,1500)});
 }
 function enterCloud(){api('state').then(function(d){SRV=d;S=clone(d);if(!Array.isArray(S.prizes))S.prizes=PRIZES.slice();showApp();if(!polling){polling=true;setTimeout(poll,1500)}},function(){})}
