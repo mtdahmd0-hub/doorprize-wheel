@@ -38,6 +38,16 @@ body{color:var(--white);font-family:var(--ui);overflow-x:hidden;-webkit-font-smo
 .stage{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr);gap:clamp(24px,4vw,64px);align-items:center;min-height:100dvh;max-width:1680px;margin:0 auto;padding:clamp(16px,3vw,44px)}
 .stage.surge{animation:surge .6s cubic-bezier(.36,.07,.19,.97) both}
 .wheel-col{width:100%;display:grid;gap:14px;justify-items:center}
+.wheel-col.is-multi{gap:8px}
+.wheel-col.is-multi .wheel{width:min(100%,44dvh);margin-top:0;transition:width .35s ease}
+.wheel-col.is-multi .wheel-live{width:100%;max-width:960px}
+.wheel-col.is-multi .wheel-hit{margin:0 0 4px;padding:5px 14px;font-size:clamp(.82rem,1.25vw,1rem)}
+.wheel-col.is-multi .slot-live{margin-top:0!important}
+.wheel-col.is-multi .slot-head{margin:0 0 8px;padding:4px 14px;font-size:.82rem}
+.wheel-col.is-multi .slot-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,175px),1fr));gap:6px}
+.wheel-col.is-multi .slot-card{padding:6px 10px;gap:7px;border-radius:9px}
+.wheel-col.is-multi .slot-card .no{font-size:.7rem}
+.wheel-col.is-multi .slot-card .nm{font-size:clamp(.76rem,1.05vw,.9rem);line-height:1.15}
 .wheel-live{width:min(100%,760px);text-align:center}
 .wheel-hit{display:inline-block;margin:0 0 8px;padding:7px 18px;border-radius:999px;background:linear-gradient(135deg,#ffd95a,#ffc928);color:#08245a;font:900 clamp(.95rem,1.7vw,1.25rem)/1.2 var(--ui);text-transform:uppercase;letter-spacing:.04em;box-shadow:0 8px 24px rgba(255,201,40,.45);animation:pop .28s cubic-bezier(.2,1.5,.35,1)}
 .wheel{position:relative;width:min(100%,84dvh);aspect-ratio:1;margin:5% auto 0}
@@ -404,6 +414,7 @@ function spin(){
   }
   var curNames=n.slice(),startNo=s.log.length+1,total=drawn.length,multi=total>1;
   var holdMs=REDUCED?120:(total<=5?1200:total<=10?950:750);
+  $('wheelCol').classList.toggle('is-multi',multi);
   $('wheelLive').hidden=!multi;$('wheelGrid').innerHTML='';$('wheelHit').hidden=true;
   if(multi)$('wheelHead').textContent=(b.prize?b.prize+' · ':'')+total+' Pemenang';
   (function runStep(k){
@@ -473,6 +484,7 @@ function done(drawn,prize){
 function closeReveal(){
   if(!revealOpen)return;
   $('reveal').hidden=true;revealOpen=false;
+  $('wheelCol').classList.remove('is-multi');
   $('wheelLive').hidden=true;$('wheelHit').hidden=true;$('wheelGrid').innerHTML='';
   s=load();spinning=false;render();$('spin').focus();
 }
