@@ -20,7 +20,7 @@ const DEFAULT_PRIZES = [
   ["Grandprize 1 (Emasku 2gr)", 1],
 ].flatMap(([name, n]) => Array(n).fill(name));
 
-const DEF = { names: ["A", "B", "C", "D", "E"], mode: "random", winners: [], remove: true, log: [], prizes: DEFAULT_PRIZES, anim: "wheel" };
+const DEF = { names: ["A", "B", "C", "D", "E"], mode: "random", winners: [], custom: [], remove: true, log: [], prizes: DEFAULT_PRIZES, anim: "wheel" };
 const SESSION_MS = 12 * 3600e3;
 const SPIN_GAP_MS = 8000; // longer than one spin animation
 
@@ -42,9 +42,23 @@ export function nextBatch(prizes, logLen) {
   return { prize, count };
 }
 
-// Draw `count` distinct winners from `names` (capped by available names); preset consumes queue first, remainder random.
-export function pickBatch(names, mode, queue, count, rand) {
+// Draw `count` distinct winners from `names` (capped by available names);
+// preset consumes queue first; custom reserves `custom` names for the last `K` remaining prizes.
+export function pickBatch(names, mode, queue, count, rand, custom, remPrizes) {
   const pool = names.slice(), out = [], n = Math.min(count, pool.length);
+  if (mode === "custom" && Array.isArray(custom) && custom.length && remPrizes > 0) {
+    const cSet = new Set(custom.map((x) => x.toLowerCase()));
+    for (let k = 0; k < n; k++) {
+      const remAfter = remPrizes - k, reservedIdx = [], otherIdx = [];
+      for (let i = 0; i < pool.length; i++) (cSet.has(pool[i].toLowerCase()) ? reservedIdx : otherIdx).push(i);
+      const src = (reservedIdx.length && remAfter <= reservedIdx.length)
+        ? reservedIdx
+        : (otherIdx.length ? otherIdx : null);
+      const idx = src ? src[Math.floor(rand() * src.length)] : Math.floor(rand() * pool.length);
+      out.push(pool.splice(idx, 1)[0]);
+    }
+    return out;
+  }
   for (let k = 0; k < n; k++) out.push(pool.splice(pick(pool, mode, queue, rand), 1)[0]);
   return out;
 }
@@ -55,16 +69,16 @@ export function clean(x) {
   const list = (a) => Array.isArray(a) && a.length <= 5000 && a.every((v) => typeof v === "string" && v.length <= 120)
     ? a.map((v) => v.trim()).filter(Boolean) : null;
   const o = {};
-  for (const k of ["names", "winners", "log", "prizes"]) if (k in x) { const l = list(x[k]); if (!l) return null; o[k] = l; }
-  if ("mode" in x) { if (x.mode !== "random" && x.mode !== "preset") return null; o.mode = x.mode; }
+  for (const k of ["names", "winners", "custom", "log", "prizes"]) if (k in x) { const l = list(x[k]); if (!l) return null; o[k] = l; }
+  if ("mode" in x) { if (x.mode !== "random" && x.mode !== "preset" && x.mode !== "custom") return null; o.mode = x.mode; }
   if ("anim" in x) { if (x.anim !== "wheel" && x.anim !== "slot") return null; o.anim = x.anim; }
   if ("remove" in x) { if (typeof x.remove !== "boolean") return null; o.remove = x.remove; }
   return o;
 }
 
-// What the wheel computer may see: everything except the preset winner queue.
+// What the wheel computer may see: everything except the preset/custom winner queues.
 export function publicView(s) {
-  return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], prizes: Array.isArray(s.prizes) ? s.prizes : DEFAULT_PRIZES, anim: s.anim === "slot" ? "slot" : "wheel", v: s.v };
+  return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], custom: [], prizes: Array.isArray(s.prizes) ? s.prizes : DEFAULT_PRIZES, anim: s.anim === "slot" ? "slot" : "wheel", v: s.v };
 }
 
 async function pbkdf2(password, salt) {
@@ -178,7 +192,8 @@ export class Room extends DurableObject {
     if (!s.names.length) return [409, { error: "Roda kosong." }];
     const before = s.names.slice(), q = s.winners.slice();
     const { prize, count } = nextBatch(s.prizes, s.log.length);
-    const winners = pickBatch(before, s.mode, q, count, Math.random);
+    const remPrizes = Math.max(0, (Array.isArray(s.prizes) ? s.prizes.length : 0) - s.log.length);
+    const winners = pickBatch(before, s.mode, q, count, Math.random, s.custom, remPrizes);
     s.winners = q;
     s.log.push(...winners);
     if (s.remove) {

@@ -217,7 +217,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 (function(){
 var KEY='doorprize',TAU=2*Math.PI;
 var PRIZES=[['Kursi lipat Montec (Azko)',15],['Voucher Belanja Eiger 200k',10],['Kipas angin portabel (Azko)',10],['Picas texas botol vacuum flask (Azko)',10],['Kompor Culinart (Azko)',5],['Soleil Sleeping Bag 250 (Azko)',5],['Blender',3],['Sleeplite kasur lipat (Azko)',5],['Oven',5],['Kris Air Fryer (Azko)',3],['Xiaomi Strika uap',3],['Grandprize 3 (Emasku 0.5 gr)',1],['Grand prize 2 (Emasku 1 gr)',1],['Grandprize 1 (Emasku 2gr)',1]].reduce(function(a,x){for(var k=0;k<x[1];k++)a.push(x[0]);return a},[]);
-var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[],prizes:PRIZES,anim:'wheel'};
+var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],custom:[],remove:true,log:[],prizes:PRIZES,anim:'wheel'};
 // Storage: this browser (GitHub Pages, one computer) or the sync server (Cloudflare, two computers).
 var CLOUD=false,S=null,polling=false;
 function clone(o){return JSON.parse(JSON.stringify(o))}
@@ -252,8 +252,19 @@ function nextBatch(prizes,logLen){
   var pz=(prizes&&prizes[logLen])||'';if(!pz)return {prize:'',count:1};
   var c=1;while(prizes[logLen+c]===pz)c++;return {prize:pz,count:c};
 }
-function pickBatch(names,mode,queue,count,rand){
+function pickBatch(names,mode,queue,count,rand,custom,remPrizes){
   var pool=names.slice(),out=[],n=Math.min(count,pool.length);
+  if(mode==='custom'&&Array.isArray(custom)&&custom.length&&remPrizes>0){
+    var cSet={};custom.forEach(function(x){cSet[x.toLowerCase()]=true});
+    for(var k=0;k<n;k++){
+      var remAfter=remPrizes-k,reservedIdx=[],otherIdx=[];
+      for(var i=0;i<pool.length;i++)(cSet[pool[i].toLowerCase()]?reservedIdx:otherIdx).push(i);
+      var src=(reservedIdx.length&&remAfter<=reservedIdx.length)?reservedIdx:(otherIdx.length?otherIdx:null);
+      var idx=src?src[Math.floor(rand()*src.length)]:Math.floor(rand()*pool.length);
+      out.push(pool.splice(idx,1)[0]);
+    }
+    return out;
+  }
   for(var k=0;k<n;k++)out.push(pool.splice(pick(pool,mode,queue,rand),1)[0]);
   return out;
 }
@@ -411,7 +422,7 @@ function spin(){
   }
   s=load();var n=s.names.slice();
   if(!n.length){spinning=false;render();return}
-  var b=nextBatch(s.prizes,s.log.length),q=s.winners.slice(),drawn=pickBatch(n,s.mode,q,b.count,Math.random);
+  var b=nextBatch(s.prizes,s.log.length),q=s.winners.slice(),rem=Math.max(0,(s.prizes?s.prizes.length:0)-s.log.length),drawn=pickBatch(n,s.mode,q,b.count,Math.random,s.custom,rem);
   s.winners=q;save(s); // consume the queue now, so admin sees it
   if(s.anim==='slot'){runSlot(n,drawn,s.log.length+1,b.prize,true);return}
   turnBatch(n,drawn,s.log.length+1,b.prize);

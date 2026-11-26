@@ -43,6 +43,7 @@ svg.i{width:1.1em;height:1.1em;flex:none;vertical-align:-.15em}
 .top h1{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.6rem;letter-spacing:-.02em;line-height:1}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--rule);color:var(--gold)}
 .chip.preset{background:var(--seal-ink);border-color:#d6545c;color:#fff4ee}
+.chip.custom{background:#0b3b49;border-color:#4ecdc4;color:#e6fffd}
 .status{font-size:.82rem;color:var(--muted);margin-left:auto}
 .wrap{max-width:1180px;margin:0 auto;padding:clamp(16px,3vw,32px);display:grid;grid-template-columns:1fr 1.15fr;gap:clamp(16px,2.4vw,28px);align-items:start}
 .col{display:grid;gap:clamp(16px,2.4vw,28px)}
@@ -79,6 +80,8 @@ textarea:focus,input:focus{border-color:var(--gold-2);outline:none;box-shadow:0 
 .modes input:checked+.dot{border-color:var(--gold);background:radial-gradient(circle,var(--gold) 0 4px,transparent 5px)}
 .modes label:has(input:checked){border-color:var(--gold-2);background:var(--ink-2)}
 .modes label.pre:has(input:checked){border-color:#d6545c;background:#3a1630}
+.modes label.cust{grid-column:1/-1}
+.modes label.cust:has(input:checked){border-color:#4ecdc4;background:#0b3b49}
 .modes input:focus-visible+.dot{outline:2px solid var(--gold);outline-offset:3px}
 
 /* queue validation ledger */
@@ -180,12 +183,19 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
         <div class="modes" role="radiogroup" aria-label="Mode undian">
           <label><input type="radio" name="mode" value="random"><span class="dot"></span><b>Mode 1 · Acak</b><span class="d">Semua peserta punya peluang sama.</span></label>
           <label class="pre"><input type="radio" name="mode" value="preset"><span class="dot"></span><b>Mode 2 · Pemenang ditentukan</b><span class="d">Undian berhenti pada antrean di bawah.</span></label>
+          <label class="cust"><input type="radio" name="mode" value="custom"><span class="dot"></span><b>Mode 3 · Custom</b><span class="d">Nama di bawah diundi acak khusus untuk hadiah-hadiah terakhir (grand prize).</span></label>
         </div>
         <div id="presetBox">
           <label class="f" for="winners">Antrean pemenang, urut</label>
           <textarea id="winners" spellcheck="false" placeholder="Satu nama per baris, sama persis dengan daftar peserta"></textarea>
           <ol class="q" id="wcheck"></ol>
           <p class="note">Tiap putaran kategori langsung mengambil sejumlah hadiah di kategori tersebut dari antrean teratas (bila antrean kurang, sisanya dipilih acak). Nama yang tidak ada di roda dilewati.</p>
+        </div>
+        <div id="customBox" hidden>
+          <label class="f" for="custom">Daftar nama custom (hadiah terakhir)</label>
+          <textarea id="custom" spellcheck="false" placeholder="Satu nama per baris, sama persis dengan daftar peserta"></textarea>
+          <ol class="q" id="ccheck"></ol>
+          <p class="note" id="customNote">Misal ada 9 nama di sini, maka ke-9 nama tersebut disimpan untuk diundi secara acak pada 9 hadiah terakhir.</p>
         </div>
       </section>
       <section class="box">
@@ -226,10 +236,10 @@ Admin surface inherits the wheel's Customer Gathering stage world (see index.htm
 (function(){
 var KEY='doorprize',AUTH='doorprize-auth',SESS='doorprize-unlocked',TAU=2*Math.PI;
 var PRIZES=[['Kursi lipat Montec (Azko)',15],['Voucher Belanja Eiger 200k',10],['Kipas angin portabel (Azko)',10],['Picas texas botol vacuum flask (Azko)',10],['Kompor Culinart (Azko)',5],['Soleil Sleeping Bag 250 (Azko)',5],['Blender',3],['Sleeplite kasur lipat (Azko)',5],['Oven',5],['Kris Air Fryer (Azko)',3],['Xiaomi Strika uap',3],['Grandprize 3 (Emasku 0.5 gr)',1],['Grand prize 2 (Emasku 1 gr)',1],['Grandprize 1 (Emasku 2gr)',1]].reduce(function(a,x){for(var k=0;k<x[1];k++)a.push(x[0]);return a},[]);
-var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],remove:true,log:[],prizes:PRIZES,anim:'wheel'};
+var DEF={names:['A','B','C','D','E'],mode:'random',winners:[],custom:[],remove:true,log:[],prizes:PRIZES,anim:'wheel'};
 // Storage: this browser (GitHub Pages, one computer) or the sync server (Cloudflare, two computers).
 var SETUP=false,CLOUD=false,S=null,SRV=null,TOKEN=null,TKEY='doorprize-token',timer=null,polling=false;
-var FIELDS=['names','mode','winners','remove','log','prizes','anim'];
+var FIELDS=['names','mode','winners','custom','remove','log','prizes','anim'];
 try{TOKEN=localStorage.getItem(TKEY)}catch(e){}
 function clone(o){return JSON.parse(JSON.stringify(o))}
 function load(){if(CLOUD)return clone(S);try{return Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)))}catch(e){return Object.assign({},DEF)}}
@@ -353,8 +363,9 @@ function fill(){ // state -> form; never overwrite the field being typed in
   var s=load(),a=document.activeElement;
   if(a!==$('names'))$('names').value=s.names.join('\n');
   if(a!==$('winners'))$('winners').value=s.winners.join('\n');
+  if(a!==$('custom'))$('custom').value=(s.custom||[]).join('\n');
   if(a!==$('prizes'))$('prizes').value=packPrizes(s.prizes).join('\n');
-  document.querySelector('input[name=mode][value='+s.mode+']').checked=true;
+  (document.querySelector('input[name=mode][value='+s.mode+']')||document.querySelector('input[name=mode][value=random]')).checked=true;
   document.querySelector('input[name=anim][value='+(s.anim==='slot'?'slot':'wheel')+']').checked=true;
   $('remove').checked=s.remove;
   var ol=$('log');ol.innerHTML='';
@@ -364,27 +375,36 @@ function fill(){ // state -> form; never overwrite the field being typed in
     li.querySelector('.nm').textContent=w;if(p)li.querySelector('.pz').textContent=p;ol.appendChild(li)});
   view(s);
 }
+function checkQueue(low,items,el){
+  var valid=0;el.innerHTML='';
+  (items||[]).forEach(function(w){var li=document.createElement('li'),ok=low.indexOf(w.toLowerCase())>=0;
+    if(ok)valid++;
+    li.className=ok?'ok':'bad';li.innerHTML=svg(ok?'i-ok':'i-x')+'<span class="nm"></span>'+(ok?'':'<span class="why">tidak ada di daftar peserta</span>');
+    li.querySelector('.nm').textContent=w;el.appendChild(li)});
+  return valid;
+}
 function view(s){
-  var pre=s.mode==='preset',pz=s.prizes||[],idx=s.log.length,np=pz[idx]||'',cnt=1;
+  var pre=s.mode==='preset',cust=s.mode==='custom',pz=s.prizes||[],idx=s.log.length,np=pz[idx]||'',cnt=1;
   if(np)while(pz[idx+cnt]===np)cnt++;
-  $('presetBox').hidden=!pre;
-  $('modeChip').textContent=pre?'Mode 2 · Ditentukan':'Mode 1 · Acak';$('modeChip').classList.toggle('preset',pre);
+  $('presetBox').hidden=!pre;$('customBox').hidden=!cust;
+  $('modeChip').textContent=pre?'Mode 2 · Ditentukan':(cust?'Mode 3 · Custom':'Mode 1 · Acak');
+  $('modeChip').classList.toggle('preset',pre);$('modeChip').classList.toggle('custom',cust);
   $('ncount').textContent=s.names.length;$('pcount').textContent=pz.length;
   $('pnext').textContent=np?('Berikutnya (No. '+pad(idx+1)+(cnt>1?'–'+pad(idx+cnt):'')+' · '+cnt+' pemenang): '+np):'Tidak ada nama hadiah tersisa (pakai No. '+pad(idx+1)+').';
-  var low=s.names.map(function(x){return x.toLowerCase()}),q=$('wcheck');q.innerHTML='';
-  s.winners.forEach(function(w){var li=document.createElement('li'),ok=low.indexOf(w.toLowerCase())>=0;
-    li.className=ok?'ok':'bad';li.innerHTML=svg(ok?'i-ok':'i-x')+'<span class="nm"></span>'+(ok?'':'<span class="why">tidak ada di daftar peserta</span>');
-    li.querySelector('.nm').textContent=w;q.appendChild(li)});
+  var low=s.names.map(function(x){return x.toLowerCase()});
+  checkQueue(low,s.winners,$('wcheck'));
+  var cv=checkQueue(low,s.custom,$('ccheck'));
+  $('customNote').textContent=cv?'Tersimpan '+cv+' nama valid di roda — akan diundi secara acak khusus untuk '+cv+' hadiah terakhir.':'Misal ada 9 nama di sini, maka ke-9 nama tersebut disimpan untuk diundi secara acak pada 9 hadiah terakhir.';
 }
 function commit(){
   var s=load();
-  s.names=lines($('names'));s.winners=lines($('winners'));s.prizes=parsePrizes($('prizes'));
+  s.names=lines($('names'));s.winners=lines($('winners'));s.custom=lines($('custom'));s.prizes=parsePrizes($('prizes'));
   s.mode=document.querySelector('input[name=mode]:checked').value;
   s.anim=document.querySelector('input[name=anim]:checked').value;
   s.remove=$('remove').checked;
   save(s);view(s);
 }
-['names','winners','prizes'].forEach(function(id){$(id).addEventListener('input',commit)});
+['names','winners','custom','prizes'].forEach(function(id){$(id).addEventListener('input',commit)});
 $('defPrizes').addEventListener('click',function(){var s=load();s.prizes=PRIZES.slice();save(s);fill()});
 document.querySelectorAll('input[name=mode],input[name=anim]').forEach(function(r){r.addEventListener('change',commit)});
 $('remove').addEventListener('change',commit);
