@@ -24,8 +24,9 @@ const [st, { token }] = await call("login", { method: "POST", body: JSON.stringi
 assert.equal(st, 200);
 
 assert.equal((await call("state", { method: "PUT", body: JSON.stringify({ mode: "curang" }) }, token))[0], 400, "bad mode rejected");
-const [, s1] = await call("state", { method: "PUT", body: JSON.stringify({ names: ["Ani", "Budi", "Cici"], mode: "preset", winners: ["zz", "budi"], remove: true, log: [] }) }, token);
+const [, s1] = await call("state", { method: "PUT", body: JSON.stringify({ names: ["Ani", "Budi", "Cici"], mode: "preset", winners: ["zz", "budi"], prizes: ["Kursi lipat", "Blender"], remove: true, log: [] }) }, token);
 assert.deepEqual(s1.names, ["Ani", "Budi", "Cici"]);
+assert.deepEqual(s1.prizes, ["Kursi lipat", "Blender"]);
 
 const [, sp] = await call("spin", { method: "POST" }, token);
 assert.equal(sp.name, "Budi", "preset queue skips unknown names, matches case-insensitively");
@@ -42,6 +43,7 @@ await call("state", { method: "PUT", body: JSON.stringify({ names: ["Ani", "Budi
 const [wst, ws] = await call("wheel/state");
 assert.equal(wst, 200, "wheel state needs no password");
 assert.deepEqual(ws.winners, [], "preset queue hidden from the wheel");
+assert.deepEqual(ws.prizes, ["Kursi lipat", "Blender"], "prizes synced to the wheel");
 assert.deepEqual(ws.names, ["Ani", "Budi"]);
 const [, wsp] = await call("wheel/spin", { method: "POST" });
 assert.equal(wsp.name, "Ani", "wheel spin follows the queue");

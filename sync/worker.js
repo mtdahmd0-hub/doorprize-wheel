@@ -3,7 +3,24 @@
 // leaves the server except to signed-in panitia.
 import { DurableObject } from "cloudflare:workers";
 
-const DEF = { names: ["A", "B", "C", "D", "E"], mode: "random", winners: [], remove: true, log: [] };
+const DEFAULT_PRIZES = [
+  ["Kursi lipat Montec (Azko)", 15],
+  ["Voucher Belanja Eiger 200k", 10],
+  ["Kipas angin portabel (Azko)", 10],
+  ["Picas texas botol vacuum flask (Azko)", 10],
+  ["Kompor Culinart (Azko)", 5],
+  ["Soleil Sleeping Bag 250 (Azko)", 5],
+  ["Blender", 3],
+  ["Sleeplite kasur lipat (Azko)", 5],
+  ["Oven", 5],
+  ["Kris Air Fryer (Azko)", 3],
+  ["Xiaomi Strika uap", 3],
+  ["Grandprize 3 (Emasku 0.5 gr)", 1],
+  ["Grand prize 2 (Emasku 1 gr)", 1],
+  ["Grandprize 1 (Emasku 2gr)", 1],
+].flatMap(([name, n]) => Array(n).fill(name));
+
+const DEF = { names: ["A", "B", "C", "D", "E"], mode: "random", winners: [], remove: true, log: [], prizes: DEFAULT_PRIZES };
 const SESSION_MS = 12 * 3600e3;
 const SPIN_GAP_MS = 8000; // longer than one spin animation
 
@@ -22,14 +39,14 @@ export function clean(x) {
   const list = (a) => Array.isArray(a) && a.length <= 5000 && a.every((v) => typeof v === "string" && v.length <= 120)
     ? a.map((v) => v.trim()).filter(Boolean) : null;
   const o = {};
-  for (const k of ["names", "winners", "log"]) if (k in x) { const l = list(x[k]); if (!l) return null; o[k] = l; }
+  for (const k of ["names", "winners", "log", "prizes"]) if (k in x) { const l = list(x[k]); if (!l) return null; o[k] = l; }
   if ("mode" in x) { if (x.mode !== "random" && x.mode !== "preset") return null; o.mode = x.mode; }
   if ("remove" in x) { if (typeof x.remove !== "boolean") return null; o.remove = x.remove; }
   return o;
 }
 
 // What the wheel computer may see: everything except the preset winner queue.
-export function publicView(s) { return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], v: s.v }; }
+export function publicView(s) { return { names: s.names, mode: s.mode, remove: s.remove, log: s.log, winners: [], prizes: s.prizes, v: s.v }; }
 
 async function pbkdf2(password, salt) {
   const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
